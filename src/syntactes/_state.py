@@ -8,7 +8,6 @@ class State(Protocol):
     State of parser automaton. A state is a set of items.
     """
 
-    number: int
     items: set
 
     def __repr__(self) -> str: ...
@@ -22,16 +21,16 @@ class LR0State:
     State of LR0 parser. A LR0 state is a set of LR0 items.
     """
 
-    def __init__(self, number: int) -> None:
-        self.number = number
+    def __init__(self) -> None:
+        self.number = None
         self.items = set()
 
     @staticmethod
-    def from_items(number: int, items: Iterable[LR0Item]) -> "LR0State":
+    def from_items(items: Iterable[LR0Item]) -> "LR0State":
         """
         Create an LR0 state from a set of LR0 items.
         """
-        state = LR0State(number)
+        state = LR0State()
         {state.add_item(item) for item in items}
 
         return state
@@ -41,6 +40,9 @@ class LR0State:
         Adds an item to the state.
         """
         self.items.add(item)
+
+    def set_number(self, number: int) -> None:
+        self.number = number
 
     def __repr__(self) -> str:
         return f"<LR0State: {self.number}>"

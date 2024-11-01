@@ -156,20 +156,24 @@ class LR0Generator:
         """
         Computes and returns the states and entries for shift actions.
         """
-        states, entries = set(), set()
-        initial_items = self.closure({LR0Item(self.grammar.starting_rule, 0)})
-        states.add(LR0State.from_items(0, initial_items))
+        states, entries = dict(), set()
 
-        _states, _entries = set(), set()
+        initial_items = self.closure({LR0Item(self.grammar.starting_rule, 0)})
+        initial_state = LR0State.from_items(initial_items)
+        initial_state.set_number(1)
+        states[initial_state] = 1
+
+        _states, _entries = dict(), set()
         while (_states, _entries) != (states, entries):
-            _states, _entries = {s for s in states}, {e for e in entries}
+            _states = {s: n for s, n in states.items()}
+            _entries = {e for e in entries}
             states, entries = self._extend_states_and_shift_entries(_states, _entries)
 
-        return states, entries
+        return set(states.keys()), entries
 
     def _extend_states_and_shift_entries(
-        self, states: set[LR0State], entries: set[Entry]
-    ) -> tuple[set[LR0State], set[Entry]]:
+        self, states: dict[LR0State, int], entries: set[Entry]
+    ) -> tuple[dict[LR0State, int], set[Entry]]:
         """
         Extends states and entries following the below algorithm:
 
@@ -181,11 +185,10 @@ class LR0Generator:
                 entries.add((S->J, X))
         ```
         """
-        _states = {s for s in states}
+        _states = {s: n for s, n in states.items()}
         _entries = {e for e in entries}
 
         EOF = Token.eof()
-        c = len(_states)
         for state in states:
             for item in state.items:
                 if item.dot_is_last() or item.after_dot == EOF:
@@ -196,10 +199,10 @@ class LR0Generator:
                 if len(new_items) == 0:
                     continue
 
-                new = LR0State.from_items(c, new_items)
+                new = LR0State.from_items(new_items)
 
-                _states.add(new)
-                c = len(_states)
+                number = _states.setdefault(new, len(_states) + 1)
+                new.set_number(number)
 
                 action = Action(new, ActionType.SHIFT)
                 _entries.add(Entry(state, item.after_dot, action))

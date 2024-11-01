@@ -85,13 +85,23 @@ class ParsingTable:
         """
         Returns a pretty-formatted string representation of the table.
         """
-        rules = [str(i) + ". " + str(r) for i, r in enumerate(self._grammar.rules)]
-        rules = "\n".join(rules)
+        return self._rules_pretty_str() + "\n\n" + self._table_pretty_str()
 
+    def _rules_pretty_str(self) -> str:
+        rules = [str(i) + ". " + str(r) for i, r in enumerate(self._grammar.rules)]
+        rules_str = "\n".join(rules)
+        rules_str = "GRAMMAR RULES\n" + "-" * max(map(len, rules)) + "\n" + rules_str
+        rules_str += "\n" + "-" * max(map(len, rules))
+
+        return rules_str
+
+    def _table_pretty_str(self) -> str:
         rows = []
         tokens = sorted(self._grammar.tokens)
-        for i, row in enumerate(self.rows.values()):
-            r = [str(i)]
+        for number, row in sorted(
+            map(lambda tpl: (tpl[0].number, tpl[1]), self.rows.items())
+        ):
+            r = [str(number)]
             for token in sorted(tokens):
                 actions = row.get(token, [])
                 if len(actions) >= 1:
@@ -106,6 +116,7 @@ class ParsingTable:
         table = "|     |  "
         table += "   |  ".join(str(token) for token in tokens) + "  |\n"
 
+        header = self._header_str() + "\n" + "-" * len(table) + "\n"
         table += "-" * len(table) + "\n"
 
         for row in rows:
@@ -113,4 +124,7 @@ class ParsingTable:
             table += new_row
             table += "-" * len(new_row) + "\n"
 
-        return rules + "\n\n" + table
+        return header + table
+
+    def _header_str(self) -> str:
+        return "LR0 PARSING TABLE"
