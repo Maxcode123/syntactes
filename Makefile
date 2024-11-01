@@ -3,3 +3,6 @@ clean:
 
 test:
 	python -m unittest discover -v src/syntactes/tests/
+
+install-local-package:
+	pip install -e .
