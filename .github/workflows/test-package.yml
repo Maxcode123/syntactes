@@ -23,6 +23,8 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Install unittest extensions
+      run: pip install unittest-extensions
     - name: Install local package
       run: make install-local-package
     - name: Test package
