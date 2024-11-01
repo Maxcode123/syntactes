@@ -1,3 +1,9 @@
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["syntactes"]
+exclude = ["syntactes.tests*"]
+namespaces = false
+
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
