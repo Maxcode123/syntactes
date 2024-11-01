@@ -1,10 +1,7 @@
-from syntactes.generator import LR0Generator
-from syntactes.grammar import Grammar
-from syntactes.rule import Rule
-from syntactes.token import Token
+from syntactes import Grammar, Rule, SLRGenerator, Token
 
 EOF = Token.eof()
-S = Token("S", False)
+S = Token("S", is_terminal=False)
 E = Token("E", False)
 T = Token("T", False)
 x = Token("x", True)
@@ -12,23 +9,21 @@ PLUS = Token("+", True)
 
 tokens = {EOF, S, E, T, x, PLUS}
 
-
-# S -> E $
+# 0. S -> E $
+# 1. E -> T + E
+# 2. E -> T
+# 3. T -> x
 rule_1 = Rule(0, S, E, EOF)
-# E -> T + E
 rule_2 = Rule(1, E, T, PLUS, E)
-# E -> T
 rule_3 = Rule(2, E, T)
-# T -> x
-rule_4 = Rule(3, T, x)
+rule_4 = Rule(4, T, x)
 
 rules = (rule_1, rule_2, rule_3, rule_4)
 
 grammar = Grammar(rule_1, rules, tokens)
 
-generator = LR0Generator(grammar)
+generator = SLRGenerator(grammar)
 
-table = generator.generate()
+parsing_table = generator.generate()
 
-print(table.pretty_str())
-
+print(parsing_table.pretty_str())
