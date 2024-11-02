@@ -1,7 +1,6 @@
 from typing import Iterable
 
-from syntactes.rule import Rule
-from syntactes.token import Token
+from syntactes import Rule, Token
 
 
 class Grammar:

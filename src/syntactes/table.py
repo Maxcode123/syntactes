@@ -1,9 +1,8 @@
 from typing import Iterable, Optional, TypeAlias
 
+from syntactes import Grammar, Token
 from syntactes._action import Action
 from syntactes._state import LR0State
-from syntactes.grammar import Grammar
-from syntactes.token import Token
 
 Row: TypeAlias = dict[Token, list[Action]]
 

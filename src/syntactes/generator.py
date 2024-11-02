@@ -1,9 +1,8 @@
+from syntactes import Grammar, Token
 from syntactes._action import Action, ActionType
 from syntactes._item import LR0Item
 from syntactes._state import LR0State
-from syntactes.grammar import Grammar
 from syntactes.table import Entry, LR0ParsingTable, SLRParsingTable
-from syntactes.token import Token
 
 
 class LR0Generator:
