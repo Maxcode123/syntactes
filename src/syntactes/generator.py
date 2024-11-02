@@ -2,7 +2,7 @@ from syntactes._action import Action, ActionType
 from syntactes._item import LR0Item
 from syntactes._state import LR0State
 from syntactes.grammar import Grammar
-from syntactes.table import Entry, ParsingTable
+from syntactes.table import Entry, LR0ParsingTable, SLRParsingTable
 from syntactes.token import Token
 
 
@@ -14,7 +14,7 @@ class LR0Generator:
     def __init__(self, grammar: Grammar) -> None:
         self.grammar = grammar
 
-    def generate(self) -> ParsingTable:
+    def generate(self) -> LR0ParsingTable:
         """
         Generates an LR0 parsing table for the configured grammar.
         """
@@ -23,7 +23,7 @@ class LR0Generator:
 
         entries = shift_entries | reduce_entries
 
-        table = ParsingTable.from_entries(entries, self.grammar)
+        table = LR0ParsingTable.from_entries(entries, self.grammar)
 
         return table
 
@@ -233,6 +233,19 @@ class LR0Generator:
 
 
 class SLRGenerator(LR0Generator):
+    def generate(self) -> SLRParsingTable:
+        """
+        Generates an SLR parsing table for the configured grammar.
+        """
+        states, shift_entries = self._create_states_and_shift_entries()
+        reduce_entries = self._create_reduce_entries(states)
+
+        entries = shift_entries | reduce_entries
+
+        table = SLRParsingTable.from_entries(entries, self.grammar)
+
+        return table
+
     def _create_reduce_entries(self, states: set[LR0State]) -> set[Entry]:
         """
         Computes and returns the entries for reduce actions and the accept action.

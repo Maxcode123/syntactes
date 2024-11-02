@@ -1,7 +1,7 @@
 from typing import Iterable, Optional, TypeAlias
 
 from syntactes._action import Action
-from syntactes._state import State
+from syntactes._state import LR0State
 from syntactes.grammar import Grammar
 from syntactes.token import Token
 
@@ -14,7 +14,7 @@ class Entry:
     a state to another state via a symbol.
     """
 
-    def __init__(self, from_state: State, token: Token, action: Action) -> None:
+    def __init__(self, from_state: LR0State, token: Token, action: Action) -> None:
         self.from_state = from_state
         self.token = token
         self.action = action
@@ -39,23 +39,23 @@ class Entry:
         )
 
 
-class ParsingTable:
+class LR0ParsingTable:
     """
     Table that contains all the transitions from state to state with a symbol.
     """
 
     def __init__(self, grammar: Grammar) -> None:
-        self.rows: dict[State, Row] = dict()
+        self.rows: dict[LR0State, Row] = dict()
         self._grammar = grammar
 
-    def get_actions(self, state: State, token: Token) -> Optional[list[Action]]:
+    def get_actions(self, state: LR0State, token: Token) -> Optional[list[Action]]:
         """
         Get the actions from state with given number with `token`.
         If there are no actions, returns None.
         """
         return self.rows.get(state, {}).get(token, None)
 
-    def get(self, state: State) -> Optional[Row]:
+    def get(self, state: LR0State) -> Optional[Row]:
         """
         Get the mapping of tokens to actions for the given state number.
         Returns None if the state is not found.
@@ -73,11 +73,11 @@ class ParsingTable:
     @staticmethod
     def from_entries(
         entries: Iterable[Entry], tokens: Iterable[Token]
-    ) -> "ParsingTable":
+    ) -> "LR0ParsingTable":
         """
         Create a parsing table from the given entries.
         """
-        table = ParsingTable(tokens)
+        table = LR0ParsingTable(tokens)
         {table.add_entry(entry) for entry in entries}
         return table
 
@@ -128,3 +128,19 @@ class ParsingTable:
 
     def _header_str(self) -> str:
         return "LR0 PARSING TABLE"
+
+
+class SLRParsingTable(LR0ParsingTable):
+    @staticmethod
+    def from_entries(
+        entries: Iterable[Entry], tokens: Iterable[Token]
+    ) -> "SLRParsingTable":
+        """
+        Create a parsing table from the given entries.
+        """
+        table = SLRParsingTable(tokens)
+        {table.add_entry(entry) for entry in entries}
+        return table
+
+    def _header_str(self) -> str:
+        return "SLR PARSING TABLE"
