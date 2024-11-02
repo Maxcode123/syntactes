@@ -1,6 +1,4 @@
-from syntactes.grammar import Grammar
-from syntactes.rule import Rule
-from syntactes.token import Token
+from syntactes import Grammar, Rule, Token
 
 EOF = Token.eof()
 S = Token("S", False)
