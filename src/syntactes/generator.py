@@ -190,7 +190,11 @@ class LR0Generator:
         EOF = Token.eof()
         for state in states:
             for item in state.items:
-                if item.dot_is_last() or item.after_dot == EOF:
+                if item.dot_is_last():
+                    continue
+
+                if item.after_dot == EOF:
+                    state.set_final()
                     continue
 
                 new_items = self.goto(state.items, item.after_dot)
