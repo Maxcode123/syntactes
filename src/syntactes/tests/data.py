@@ -1,6 +1,8 @@
 from syntactes import Grammar, Rule, Token
+from syntactes._action import Action
 from syntactes._item import LR0Item
 from syntactes._state import LR0State
+from syntactes.table import Entry, LR0ParsingTable, SLRParsingTable
 
 EOF = Token.eof()
 S = Token("S", False)
@@ -40,6 +42,7 @@ def state_2():
     item_1 = LR0Item(grammar.starting_rule, 1)  # S -> E . $
     state = LR0State.from_items({item_1})
     state.set_number(2)
+    state.set_final()
     return state
 
 
@@ -73,3 +76,42 @@ def state_6():
     state = LR0State.from_items({item_1})
     state.set_number(6)
     return state
+
+
+def lr0_parsing_table():
+    table = LR0ParsingTable(grammar)
+    table.add_entry(Entry(state_1(), E, Action.shift(state_2())))
+    table.add_entry(Entry(state_1(), T, Action.shift(state_3())))
+    table.add_entry(Entry(state_1(), x, Action.shift(state_5())))
+    table.add_entry(Entry(state_2(), EOF, Action.accept()))
+    table.add_entry(Entry(state_3(), x, Action.reduce(rule_3)))
+    table.add_entry(Entry(state_3(), PLUS, Action.shift(state_4())))
+    table.add_entry(Entry(state_3(), PLUS, Action.reduce(rule_3)))
+    table.add_entry(Entry(state_3(), EOF, Action.reduce(rule_3)))
+    table.add_entry(Entry(state_4(), x, Action.shift(state_5())))
+    table.add_entry(Entry(state_4(), E, Action.shift(state_6())))
+    table.add_entry(Entry(state_4(), T, Action.shift(state_3())))
+    table.add_entry(Entry(state_5(), x, Action.reduce(rule_4)))
+    table.add_entry(Entry(state_5(), PLUS, Action.reduce(rule_4)))
+    table.add_entry(Entry(state_5(), EOF, Action.reduce(rule_4)))
+    table.add_entry(Entry(state_6(), x, Action.reduce(rule_2)))
+    table.add_entry(Entry(state_6(), PLUS, Action.reduce(rule_2)))
+    table.add_entry(Entry(state_6(), EOF, Action.reduce(rule_2)))
+    return table
+
+
+def slr_parsing_table():
+    table = SLRParsingTable(grammar)
+    table.add_entry(Entry(state_1(), x, Action.shift(state_5())))
+    table.add_entry(Entry(state_1(), E, Action.shift(state_2())))
+    table.add_entry(Entry(state_1(), T, Action.shift(state_3())))
+    table.add_entry(Entry(state_2(), EOF, Action.accept()))
+    table.add_entry(Entry(state_3(), PLUS, Action.shift(state_4())))
+    table.add_entry(Entry(state_3(), EOF, Action.reduce(rule_3)))
+    table.add_entry(Entry(state_4(), x, Action.shift(state_5())))
+    table.add_entry(Entry(state_4(), E, Action.shift(state_6())))
+    table.add_entry(Entry(state_4(), T, Action.shift(state_3())))
+    table.add_entry(Entry(state_5(), PLUS, Action.reduce(rule_4)))
+    table.add_entry(Entry(state_5(), EOF, Action.reduce(rule_4)))
+    table.add_entry(Entry(state_6(), EOF, Action.reduce(rule_2)))
+    return table
