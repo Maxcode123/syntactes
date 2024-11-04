@@ -262,6 +262,13 @@ class TestLR0GeneratorGenerateActions(TestLR0Generator):
     def test_state_6_token_x(self):
         self.assert_state_actions(reduce(rule_2))
 
+class TestLR0GeneratorGenerateInitialState(TestLR0Generator):
+    def subject(self):
+        return self.generator().generate().initial_state
+
+    def test_initial_state(self):
+        self.assertResult(state_1())
+
 
 class TestSLRGenerator(TestCase):
     def setUp(self):
@@ -370,3 +377,11 @@ class TestSLRGeneratorGenerateActions(TestSLRGenerator):
     @args(state_6(), EOF)
     def test_state_6_token_eof(self):
         self.assert_state_actions(reduce(rule_2))
+
+
+class TestSLRGeneratorGenerateInitialState(TestSLRGenerator):
+    def subject(self):
+        return self.generator().generate().initial_state
+
+    def test_initial_state(self):
+        self.assertResult(state_1())

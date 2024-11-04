@@ -46,6 +46,7 @@ class LR0ParsingTable:
     def __init__(self, grammar: Grammar) -> None:
         self.rows: dict[LR0State, Row] = dict()
         self._grammar = grammar
+        self._initial_state = None
 
     def get_actions(self, state: LR0State, token: Token) -> Optional[list[Action]]:
         """
@@ -65,9 +66,12 @@ class LR0ParsingTable:
         """
         Adds an entry to the parsing table.
         """
-        self.rows.setdefault(entry.from_state, {}).setdefault(
-            entry.token, list()
-        ).append(entry.action)
+        if entry.from_state.number == 1:
+            self._initial_state = entry.from_state
+
+        row = self.rows.setdefault(entry.from_state, {})
+        actions = row.setdefault(entry.token, list())
+        actions.append(entry.action)
 
     @staticmethod
     def from_entries(
@@ -85,6 +89,10 @@ class LR0ParsingTable:
         Returns a pretty-formatted string representation of the table.
         """
         return self._rules_pretty_str() + "\n\n" + self._table_pretty_str()
+
+    @property
+    def initial_state(self) -> LR0State:
+        return self._initial_state
 
     def _rules_pretty_str(self) -> str:
         rules = [str(i) + ". " + str(r) for i, r in enumerate(self._grammar.rules)]
