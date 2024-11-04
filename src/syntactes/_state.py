@@ -11,6 +11,7 @@ class LR0State:
     def __init__(self) -> None:
         self.number = None
         self.items = set()
+        self.is_final = False
 
     @staticmethod
     def from_items(items: Iterable[LR0Item]) -> "LR0State":
@@ -30,6 +31,9 @@ class LR0State:
 
     def set_number(self, number: int) -> None:
         self.number = number
+
+    def set_final(self) -> None:
+        self.is_final = True
 
     def __repr__(self) -> str:
         return f"<LR0State: {self.number}>"
