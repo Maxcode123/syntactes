@@ -43,6 +43,27 @@ class Action:
         self.actionable = actionable
         self.action_type = action_type
 
+    @staticmethod
+    def shift(state: Actionable) -> "Action":
+        """
+        Create a shift action to the given state.
+        """
+        return Action(state, ActionType.SHIFT)
+
+    @staticmethod
+    def reduce(rule: Actionable) -> "Action":
+        """
+        Create a reduce action of the given rule.
+        """
+        return Action(rule, ActionType.REDUCE)
+
+    @staticmethod
+    def accept() -> "Action":
+        """
+        Create an accept action.
+        """
+        return Action(None, ActionType.ACCEPT)
+
     def __repr__(self) -> str:
         return f"<Action: {self}>"
 
