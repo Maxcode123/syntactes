@@ -1,19 +1,6 @@
-from typing import Iterable, Protocol
+from typing import Iterable
 
 from syntactes._item import LR0Item
-
-
-class State(Protocol):
-    """
-    State of parser automaton. A state is a set of items.
-    """
-
-    items: set
-
-    def __repr__(self) -> str: ...
-    def __str__(self) -> str: ...
-    def __hash__(self) -> int: ...
-    def __eq__(self) -> bool: ...
 
 
 class LR0State:
