@@ -203,8 +203,7 @@ class LR0Generator:
                 number = _states.setdefault(new, len(_states) + 1)
                 new.set_number(number)
 
-                action = Action(new, ActionType.SHIFT)
-                _entries.add(Entry(state, item.after_dot, action))
+                _entries.add(Entry(state, item.after_dot, Action.shift(new)))
 
         return _states, _entries
 
@@ -217,16 +216,14 @@ class LR0Generator:
         for state in states:
             for item in state.items:
                 if item.after_dot == Token.eof():
-                    action = Action(item.rule, ActionType.ACCEPT)
-                    entries.add(Entry(state, Token.eof(), action))
+                    entries.add(Entry(state, Token.eof(), Action.accept()))
 
                 if not item.dot_is_last():
                     continue
 
-                action = Action(item.rule, ActionType.REDUCE)
                 for token in self.grammar.tokens:
                     if token.is_terminal:
-                        entries.add(Entry(state, token, action))
+                        entries.add(Entry(state, token, Action.reduce(item.rule)))
 
         return entries
 
@@ -254,14 +251,12 @@ class SLRGenerator(LR0Generator):
         for state in states:
             for item in state.items:
                 if item.after_dot == Token.eof():
-                    action = Action(item.rule, ActionType.ACCEPT)
-                    entries.add(Entry(state, Token.eof(), action))
+                    entries.add(Entry(state, Token.eof(), Action.accept()))
 
                 if not item.dot_is_last():
                     continue
 
-                action = Action(item.rule, ActionType.REDUCE)
                 for token in self._follow(item.rule.lhs):
-                    entries.add(Entry(state, token, action))
+                    entries.add(Entry(state, token, Action.reduce(item.rule)))
 
         return entries

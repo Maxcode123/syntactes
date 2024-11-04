@@ -30,8 +30,8 @@ def reduce(rule):
     return Action(rule, ActionType.REDUCE)
 
 
-def accept(rule):
-    return Action(rule, ActionType.ACCEPT)
+def accept():
+    return Action(None, ActionType.ACCEPT)
 
 
 class TestLR0Generator(TestCase):
@@ -178,7 +178,7 @@ class TestLR0GeneratorGenerateActions(TestLR0Generator):
 
     @args(state_2(), EOF)
     def test_state_2_token_eof(self):
-        self.assert_state_actions(accept(grammar.starting_rule))
+        self.assert_state_actions(accept())
 
     @args(state_3(), PLUS)
     def test_state_3_token_plus(self):
@@ -311,7 +311,7 @@ class TestSLRGeneratorGenerateActions(TestSLRGenerator):
 
     @args(state_2(), EOF)
     def test_state_2_token_eof(self):
-        self.assert_state_actions(accept(grammar.starting_rule))
+        self.assert_state_actions(accept())
 
     @args(state_3(), PLUS)
     def test_state_3_token_plus(self):
