@@ -3,7 +3,7 @@ from typing import Iterable, Optional, TypeAlias
 from syntactes import Grammar, Token
 from syntactes._action import Action
 from syntactes._state import LR0State
-from syntactes.parsing_table import Entry
+from syntactes.parsing_table import Conflict, Entry
 
 Row: TypeAlias = dict[Token, list[Action]]
 
@@ -64,10 +64,17 @@ class LR0ParsingTable:
         """
         return self._rules_pretty_str() + "\n\n" + self._table_pretty_str()
 
-    def conflicts(self) -> list:
+    def conflicts(self) -> list[Conflict]:
         """
         Retuns a list with all the conflicts in the parsing table.
         """
+        conflicts = []
+        for state, row in self.rows.items():
+            for token, actions in row.items():
+                if len(actions) > 1:
+                    conflicts.append(Conflict(state, token, actions))
+
+        return conflicts
 
     def _rules_pretty_str(self) -> str:
         rules = [str(i) + ". " + str(r) for i, r in enumerate(self._grammar.rules)]
