@@ -1,7 +1,7 @@
 from collections import deque
 from typing import Iterable
 
-from syntactes import Token
+from syntactes import Grammar, LR0Generator, SLRGenerator, Token
 from syntactes._action import Action, ActionType
 from syntactes._state import LR0State
 from syntactes.parser import (
@@ -10,7 +10,7 @@ from syntactes.parser import (
     ParserError,
     UnexpectedTokenError,
 )
-from syntactes.table import LR0ParsingTable, SLRParsingTable
+from syntactes.table import LR0ParsingTable
 
 
 class LR0Parser:
@@ -23,6 +23,16 @@ class LR0Parser:
         self._token_stack: deque[Token] = deque()
         self._state_stack: deque[LR0State] = deque()
         self._token_stream: deque[Token] = deque()
+
+    @staticmethod
+    def from_grammar(grammar: Grammar) -> "LR0Parser":
+        """
+        Create a parser for the given grammar.
+        """
+        generator = LR0Generator(grammar)
+        parsing_table = generator.generate()
+        parser = LR0Parser(parsing_table)
+        return parser
 
     def parse(self, stream: Iterable[Token]) -> None:
         """
@@ -101,3 +111,13 @@ class SLRParser(LR0Parser):
     """
     Parses streams of tokens based on the configured parsing table.
     """
+
+    @staticmethod
+    def from_grammar(grammar: Grammar) -> "SLRParser":
+        """
+        Create a parser for the given grammar.
+        """
+        generator = SLRGenerator(grammar)
+        parsing_table = generator.generate()
+        parser = SLRParser(parsing_table)
+        return parser
