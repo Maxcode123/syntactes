@@ -3,9 +3,10 @@ class Token:
     A token of the grammar. Can be a terminal or non-terminal symbol.
     """
 
-    def __init__(self, symbol: str, is_terminal: bool) -> None:
+    def __init__(self, symbol: str, is_terminal: bool, value=None) -> None:
         self.symbol = symbol
         self.is_terminal = is_terminal
+        self.value = value
 
     @staticmethod
     def null() -> "Token":

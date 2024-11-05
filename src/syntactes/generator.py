@@ -1,9 +1,8 @@
+from syntactes import Grammar, Token
 from syntactes._action import Action, ActionType
 from syntactes._item import LR0Item
 from syntactes._state import LR0State
-from syntactes.grammar import Grammar
 from syntactes.table import Entry, LR0ParsingTable, SLRParsingTable
-from syntactes.token import Token
 
 
 class LR0Generator:
@@ -191,7 +190,11 @@ class LR0Generator:
         EOF = Token.eof()
         for state in states:
             for item in state.items:
-                if item.dot_is_last() or item.after_dot == EOF:
+                if item.dot_is_last():
+                    continue
+
+                if item.after_dot == EOF:
+                    state.set_final()
                     continue
 
                 new_items = self.goto(state.items, item.after_dot)
@@ -204,8 +207,7 @@ class LR0Generator:
                 number = _states.setdefault(new, len(_states) + 1)
                 new.set_number(number)
 
-                action = Action(new, ActionType.SHIFT)
-                _entries.add(Entry(state, item.after_dot, action))
+                _entries.add(Entry(state, item.after_dot, Action.shift(new)))
 
         return _states, _entries
 
@@ -218,16 +220,14 @@ class LR0Generator:
         for state in states:
             for item in state.items:
                 if item.after_dot == Token.eof():
-                    action = Action(item.rule, ActionType.ACCEPT)
-                    entries.add(Entry(state, Token.eof(), action))
+                    entries.add(Entry(state, Token.eof(), Action.accept()))
 
                 if not item.dot_is_last():
                     continue
 
-                action = Action(item.rule, ActionType.REDUCE)
                 for token in self.grammar.tokens:
                     if token.is_terminal:
-                        entries.add(Entry(state, token, action))
+                        entries.add(Entry(state, token, Action.reduce(item.rule)))
 
         return entries
 
@@ -255,14 +255,12 @@ class SLRGenerator(LR0Generator):
         for state in states:
             for item in state.items:
                 if item.after_dot == Token.eof():
-                    action = Action(item.rule, ActionType.ACCEPT)
-                    entries.add(Entry(state, Token.eof(), action))
+                    entries.add(Entry(state, Token.eof(), Action.accept()))
 
                 if not item.dot_is_last():
                     continue
 
-                action = Action(item.rule, ActionType.REDUCE)
                 for token in self._follow(item.rule.lhs):
-                    entries.add(Entry(state, token, action))
+                    entries.add(Entry(state, token, Action.reduce(item.rule)))
 
         return entries
