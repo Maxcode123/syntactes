@@ -3,39 +3,9 @@ from typing import Iterable, Optional, TypeAlias
 from syntactes import Grammar, Token
 from syntactes._action import Action
 from syntactes._state import LR0State
+from syntactes.parsing_table import Entry
 
 Row: TypeAlias = dict[Token, list[Action]]
-
-
-class Entry:
-    """
-    An entry of the parsing table. Holds the information of a transition from
-    a state to another state via a symbol.
-    """
-
-    def __init__(self, from_state: LR0State, token: Token, action: Action) -> None:
-        self.from_state = from_state
-        self.token = token
-        self.action = action
-
-    def __repr__(self) -> str:
-        return f"<Entry: {str(self)}>"
-
-    def __str__(self) -> str:
-        return f"{self.from_state.number}, {self.action}, {self.token}"
-
-    def __hash__(self) -> int:
-        return hash((self.from_state, self.token, self.action))
-
-    def __eq__(self, other) -> bool:
-        if not isinstance(other, Entry):
-            return False
-
-        return (
-            self.from_state == other.from_state
-            and self.token == other.token
-            and self.action == other.action
-        )
 
 
 class LR0ParsingTable:
@@ -93,6 +63,11 @@ class LR0ParsingTable:
         Returns a pretty-formatted string representation of the table.
         """
         return self._rules_pretty_str() + "\n\n" + self._table_pretty_str()
+
+    def conflicts(self) -> list:
+        """
+        Retuns a list with all the conflicts in the parsing table.
+        """
 
     def _rules_pretty_str(self) -> str:
         rules = [str(i) + ". " + str(r) for i, r in enumerate(self._grammar.rules)]

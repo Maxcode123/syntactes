@@ -10,7 +10,7 @@ from syntactes.parser import (
     ParserError,
     UnexpectedTokenError,
 )
-from syntactes.table import LR0ParsingTable
+from syntactes.parsing_table import LR0ParsingTable
 
 
 class LR0Parser:
