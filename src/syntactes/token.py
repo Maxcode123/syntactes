@@ -1,9 +1,12 @@
+from typing import Any
+
+
 class Token:
     """
     A token of the grammar. Can be a terminal or non-terminal symbol.
     """
 
-    def __init__(self, symbol: str, is_terminal: bool, value=None) -> None:
+    def __init__(self, symbol: str, is_terminal: bool, value: Any = None) -> None:
         self.symbol = symbol
         self.is_terminal = is_terminal
         self.value = value
