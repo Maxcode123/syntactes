@@ -1,6 +1,6 @@
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["syntactes"]
+include = ["syntactes*"]
 exclude = ["syntactes.tests*"]
 namespaces = false
 
