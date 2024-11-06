@@ -5,7 +5,17 @@
 [![Actions status](https://github.com/Maxcode123/syntactes/actions/workflows/test-package.yml/badge.svg?branch=main)](https://github.com/Maxcode123/syntactes/actions/workflows/test-package.yml?query=branch%3Amain)
 ---
 # syntactes
-Python parser generator
+A simpler Python parser generator.  
+The name is derived from Greek _συντάκτης_ (/sin'daktis/) meaning editor/composer.
+
+## Features
+* Parsing table creation
+* Token parsing and action execution
+
+## Installation
+```
+> pip install syntactes
+```
 
 ## Quick start
 
