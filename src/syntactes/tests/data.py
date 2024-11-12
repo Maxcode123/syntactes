@@ -1,4 +1,4 @@
-from syntactes import Grammar, Rule, Token
+from syntactes import Grammar, OperatorType, Rule, Token
 from syntactes._action import Action
 from syntactes._item import LR0Item
 from syntactes._state import LR0State
@@ -9,7 +9,7 @@ S = Token("S", False)
 E = Token("E", False)
 T = Token("T", False)
 x = Token("x", True)
-PLUS = Token("+", True)
+PLUS = Token.operator("+", OperatorType.BINARY_LEFT_ASSOCIATIVE)
 
 tokens = {EOF, S, E, T, x, PLUS}
 

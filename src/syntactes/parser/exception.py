@@ -19,3 +19,18 @@ class NotAcceptedError(ParserError):
     The parser did not receive an accept action. The stream of tokens is
     syntactically invalid.
     """
+
+
+class UnresolvableConflictError(ParserError):
+    """
+    An unresolvable conflict occured probable because of a nested operation
+    with a token that cannot associate.
+
+    e.g. x op y op z, if op cannot associate (has NO_ASSOCIATION associativity).
+    """
+
+    def __init__(self, token, actions):
+        self.token = token
+        self.action = actions
+        msg = f"Cannot resolve conflict for actions {actions}; token {token} cannot associate. "
+        super().__init__(msg)

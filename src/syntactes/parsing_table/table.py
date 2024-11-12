@@ -71,6 +71,9 @@ class LR0ParsingTable:
         conflicts = []
         for state, row in self.rows.items():
             for token, actions in row.items():
+                if token.operator_type is not None:
+                    continue
+
                 if len(actions) > 1:
                     conflicts.append(Conflict(state, token, actions))
 

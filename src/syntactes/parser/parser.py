@@ -1,7 +1,7 @@
 from collections import deque
 from typing import Iterable
 
-from syntactes import Grammar, LR0Generator, SLRGenerator, Token
+from syntactes import Grammar, LR0Generator, SLRGenerator, Token, OperatorType
 from syntactes._action import Action, ActionType
 from syntactes._state import LR0State
 from syntactes.parser import (
@@ -9,6 +9,7 @@ from syntactes.parser import (
     NotAcceptedError,
     ParserError,
     UnexpectedTokenError,
+    UnresolvableConflictError,
 )
 from syntactes.parsing_table import LR0ParsingTable
 
@@ -80,16 +81,33 @@ class LR0Parser:
 
     def _get_action(self, token: Token) -> Action:
         actions = self._table.get_actions(self._get_state(), token)
-        if actions is None:
+        if actions is None or len(actions) == 0:
             actions = self._table.get(self._get_state())
             expected_tokens = [] if actions is None else list(actions.keys())
             self._raise(UnexpectedTokenError(token, expected_tokens))
 
-        action = self._resolve_conflict(actions)
+        action = self._resolve_conflict(token, actions)
         return action
 
-    def _resolve_conflict(self, actions: list[Action]) -> Action:
-        return actions[0]
+    def _resolve_conflict(self, token: Token, actions: list[Action]) -> Action:
+        if len(actions) == 1:
+            return actions[0]
+
+        if token.operator_type in {
+            OperatorType.BINARY_LEFT_ASSOCIATIVE,
+            OperatorType.UNARY_PRE_ASSOCIATIVE,
+        }:
+            reduce_actions = filter(lambda a: a.is_reduce(), actions)
+            return next(reduce_actions)
+
+        if token.operator_type in {
+            OperatorType.BINARY_RIGHT_ASSOCIATIVE,
+            OperatorType.UNARY_POST_ASSOCIATIVE,
+        }:
+            shift_actions = filter(lambda a: a.is_shift(), actions)
+            return next(shift_actions)
+
+        self._raise(UnresolvableConflictError(token, actions))
 
     def _set_state(self, state: LR0State) -> None:
         self._state_stack.append(state)

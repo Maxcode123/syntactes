@@ -64,6 +64,18 @@ class Action:
         """
         return Action(None, ActionType.ACCEPT)
 
+    def is_shift(self) -> bool:
+        """
+        Returns True if the action is a shift action, False otherwise.
+        """
+        return self.action_type == ActionType.SHIFT
+
+    def is_reduce(self) -> bool:
+        """
+        Returns True if the action is a reduce action, False otherwise.
+        """
+        return self.action_type == ActionType.REDUCE
+
     def __repr__(self) -> str:
         return f"<Action: {self}>"
 

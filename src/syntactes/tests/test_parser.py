@@ -18,8 +18,8 @@ from syntactes.tests.data import (
     x,
 )
 
-x1 = Token("x", True, 1)
-x2 = Token("x", True, 2)
+x1 = Token("x", True, value=1)
+x2 = Token("x", True, value=2)
 
 
 class TestLR0Parser(TestCase):
