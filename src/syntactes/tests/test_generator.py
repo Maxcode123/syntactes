@@ -8,16 +8,16 @@ from syntactes.tests.data import (
     PLUS,
     E,
     T,
-    grammar,
-    rule_2,
-    rule_3,
-    rule_4,
-    state_1,
-    state_2,
-    state_3,
-    state_4,
-    state_5,
-    state_6,
+    grammar_1,
+    rule_2_1,
+    rule_3_1,
+    rule_4_1,
+    lr0_state_1,
+    lr0_state_2,
+    lr0_state_3,
+    lr0_state_4,
+    lr0_state_5,
+    lr0_state_6,
     x,
 )
 
@@ -36,7 +36,7 @@ def accept():
 
 class TestLR0Generator(TestCase):
     def setUp(self):
-        self._generator = LR0Generator(grammar)
+        self._generator = LR0Generator(grammar_1)
 
     def generator(self):
         return self._generator
@@ -50,22 +50,22 @@ class TestLR0GeneratorClosure(TestLR0Generator):
         return self.generator().closure(items)
 
     # S -> . E $
-    @args({LR0Item(grammar.starting_rule, 0)})
+    @args({LR0Item(grammar_1.starting_rule, 0)})
     def test_with_starting_item(self):
         self.assert_items({"S -> . E $", "E -> . T + E", "E -> . T", "T -> . x"})
 
     # E -> . T
-    @args({LR0Item(rule_3, 0)})
+    @args({LR0Item(rule_3_1, 0)})
     def test_with_rule3_first_item(self):
         self.assert_items({"E -> . T", "T -> . x"})
 
     # T -> . x
-    @args({LR0Item(rule_4, 0)})
+    @args({LR0Item(rule_4_1, 0)})
     def test_with_rule4_first_item(self):
         self.assert_items({"T -> . x"})
 
     # E -> T + . E
-    @args({LR0Item(rule_2, 2)})
+    @args({LR0Item(rule_2_1, 2)})
     def test_with_rule2_third_item(self):
         self.assert_items({"E -> T + . E", "E -> . T + E", "E -> . T", "T -> . x"})
 
@@ -75,22 +75,22 @@ class TestLR0GeneratorGoto(TestLR0Generator):
         return self.generator().goto(items, token)
 
     # S -> . E $
-    @args({LR0Item(grammar.starting_rule, 0)}, T)
+    @args({LR0Item(grammar_1.starting_rule, 0)}, T)
     def test_starting_item_with_other_token(self):
         self.assert_items(set())
 
     # S -> . E $
-    @args({LR0Item(grammar.starting_rule, 0)}, E)
+    @args({LR0Item(grammar_1.starting_rule, 0)}, E)
     def test_starting_item(self):
         self.assert_items({"S -> E . $"})
 
     # E -> T + . E
-    @args({LR0Item(rule_2, 2)}, E)
+    @args({LR0Item(rule_2_1, 2)}, E)
     def test_with_rule2_third_item(self):
         self.assert_items({"E -> T + E ."})
 
     # E -> T . + E
-    @args({LR0Item(rule_2, 1)}, PLUS)
+    @args({LR0Item(rule_2_1, 1)}, PLUS)
     def test_with_rule2_second_item(self):
         self.assert_items({"E -> T + . E", "E -> . T + E", "E -> . T", "T -> . x"})
 
@@ -102,12 +102,12 @@ class TestLR0GeneratorGetStates(TestLR0Generator):
     def test_get_states(self):
         self.assertResultSet(
             {
-                state_1(),
-                state_2(),
-                state_3(),
-                state_4(),
-                state_5(),
-                state_6(),
+                lr0_state_1(),
+                lr0_state_2(),
+                lr0_state_3(),
+                lr0_state_4(),
+                lr0_state_5(),
+                lr0_state_6(),
             }
         )
 
@@ -123,37 +123,37 @@ class TestLR0GeneratorGenerateEntries(TestLR0Generator):
     # E -> . T + E
     # E -> . T
     # T -> . x
-    @args(state_1())
-    def test_state_1_entries(self):
+    @args(lr0_state_1())
+    def test_lr0_state_1_entries(self):
         self.assert_state_entries(x, E, T)
 
     # S -> E . $
-    @args(state_2())
-    def test_state_2_entries(self):
+    @args(lr0_state_2())
+    def test_lr0_state_2_entries(self):
         self.assert_state_entries(EOF)
 
     # E -> T . + E
     # E -> T .
-    @args(state_3())
-    def test_state_3_entries(self):
+    @args(lr0_state_3())
+    def test_lr0_state_3_entries(self):
         self.assert_state_entries(x, PLUS, EOF)
 
     # E -> T + . E
     # E -> . T + E
     # E -> . T
     # T -> . x
-    @args(state_4())
-    def test_state_4_entries(self):
+    @args(lr0_state_4())
+    def test_lr0_state_4_entries(self):
         self.assert_state_entries(x, E, T)
 
-    @args(state_5())
-    def test_state_5_entries(self):
+    @args(lr0_state_5())
+    def test_lr0_state_5_entries(self):
         # T -> x .
         self.assert_state_entries(x, PLUS, EOF)
 
     # E -> T + E .
-    @args(state_6())
-    def test_state_6_entries(self):
+    @args(lr0_state_6())
+    def test_lr0_state_6_entries(self):
         self.assert_state_entries(x, PLUS, EOF)
 
 
@@ -164,69 +164,69 @@ class TestLR0GeneratorGenerateActions(TestLR0Generator):
     def assert_state_actions(self, *state_actions):
         self.assertCountEqual(self.result(), state_actions)
 
-    @args(state_1(), E)
-    def test_state_1_token_E(self):
-        self.assert_state_actions(shift(state_2()))
+    @args(lr0_state_1(), E)
+    def test_lr0_state_1_token_E(self):
+        self.assert_state_actions(shift(lr0_state_2()))
 
-    @args(state_1(), T)
-    def test_state_1_token_T(self):
-        self.assert_state_actions(shift(state_3()))
+    @args(lr0_state_1(), T)
+    def test_lr0_state_1_token_T(self):
+        self.assert_state_actions(shift(lr0_state_3()))
 
-    @args(state_1(), x)
-    def test_state_1_token_x(self):
-        self.assert_state_actions(shift(state_5()))
+    @args(lr0_state_1(), x)
+    def test_lr0_state_1_token_x(self):
+        self.assert_state_actions(shift(lr0_state_5()))
 
-    @args(state_2(), EOF)
-    def test_state_2_token_eof(self):
+    @args(lr0_state_2(), EOF)
+    def test_lr0_state_2_token_eof(self):
         self.assert_state_actions(accept())
 
-    @args(state_3(), PLUS)
-    def test_state_3_token_plus(self):
-        self.assert_state_actions(reduce(rule_3), shift(state_4()))
+    @args(lr0_state_3(), PLUS)
+    def test_lr0_state_3_token_plus(self):
+        self.assert_state_actions(reduce(rule_3_1), shift(lr0_state_4()))
 
-    @args(state_3(), EOF)
-    def test_state_3_token_eof(self):
-        self.assert_state_actions(reduce(rule_3))
+    @args(lr0_state_3(), EOF)
+    def test_lr0_state_3_token_eof(self):
+        self.assert_state_actions(reduce(rule_3_1))
 
-    @args(state_3(), x)
-    def test_state_3_token_x(self):
-        self.assert_state_actions(reduce(rule_3))
+    @args(lr0_state_3(), x)
+    def test_lr0_state_3_token_x(self):
+        self.assert_state_actions(reduce(rule_3_1))
 
-    @args(state_4(), x)
-    def test_state_4_token_x(self):
-        self.assert_state_actions(shift(state_5()))
+    @args(lr0_state_4(), x)
+    def test_lr0_state_4_token_x(self):
+        self.assert_state_actions(shift(lr0_state_5()))
 
-    @args(state_4(), E)
-    def test_state_4_token_E(self):
-        self.assert_state_actions(shift(state_6()))
+    @args(lr0_state_4(), E)
+    def test_lr0_state_4_token_E(self):
+        self.assert_state_actions(shift(lr0_state_6()))
 
-    @args(state_4(), T)
-    def test_state_4_token_T(self):
-        self.assert_state_actions(shift(state_3()))
+    @args(lr0_state_4(), T)
+    def test_lr0_state_4_token_T(self):
+        self.assert_state_actions(shift(lr0_state_3()))
 
-    @args(state_5(), PLUS)
-    def test_state_5_token_plus(self):
-        self.assert_state_actions(reduce(rule_4))
+    @args(lr0_state_5(), PLUS)
+    def test_lr0_state_5_token_plus(self):
+        self.assert_state_actions(reduce(rule_4_1))
 
-    @args(state_5(), EOF)
-    def test_state_5_token_eof(self):
-        self.assert_state_actions(reduce(rule_4))
+    @args(lr0_state_5(), EOF)
+    def test_lr0_state_5_token_eof(self):
+        self.assert_state_actions(reduce(rule_4_1))
 
-    @args(state_5(), x)
-    def test_state_5_token_x(self):
-        self.assert_state_actions(reduce(rule_4))
+    @args(lr0_state_5(), x)
+    def test_lr0_state_5_token_x(self):
+        self.assert_state_actions(reduce(rule_4_1))
 
-    @args(state_6(), EOF)
-    def test_state_6_token_eof(self):
-        self.assert_state_actions(reduce(rule_2))
+    @args(lr0_state_6(), EOF)
+    def test_lr0_state_6_token_eof(self):
+        self.assert_state_actions(reduce(rule_2_1))
 
-    @args(state_6(), PLUS)
-    def test_state_6_token_plus(self):
-        self.assert_state_actions(reduce(rule_2))
+    @args(lr0_state_6(), PLUS)
+    def test_lr0_state_6_token_plus(self):
+        self.assert_state_actions(reduce(rule_2_1))
 
-    @args(state_6(), x)
-    def test_state_6_token_x(self):
-        self.assert_state_actions(reduce(rule_2))
+    @args(lr0_state_6(), x)
+    def test_lr0_state_6_token_x(self):
+        self.assert_state_actions(reduce(rule_2_1))
 
 
 class TestLR0GeneratorGenerateInitialState(TestLR0Generator):
@@ -234,12 +234,12 @@ class TestLR0GeneratorGenerateInitialState(TestLR0Generator):
         return self.generator().generate().initial_state
 
     def test_initial_state(self):
-        self.assertResult(state_1())
+        self.assertResult(lr0_state_1())
 
 
 class TestSLRGenerator(TestCase):
     def setUp(self):
-        self._generator = SLRGenerator(grammar)
+        self._generator = SLRGenerator(grammar_1)
 
     def generator(self):
         return self._generator
@@ -256,37 +256,37 @@ class TestSLRGeneratorGenerateEntries(TestSLRGenerator):
     # E -> . T + E
     # E -> . T
     # T -> . x
-    @args(state_1())
-    def test_state_1_entries(self):
+    @args(lr0_state_1())
+    def test_lr0_state_1_entries(self):
         self.assert_state_entries(x, E, T)
 
     # S -> E . $
-    @args(state_2())
-    def test_state_2_entries(self):
+    @args(lr0_state_2())
+    def test_lr0_state_2_entries(self):
         self.assert_state_entries(EOF)
 
     # E -> T . + E
     # E -> T .
-    @args(state_3())
-    def test_state_3_entries(self):
+    @args(lr0_state_3())
+    def test_lr0_state_3_entries(self):
         self.assert_state_entries(PLUS, EOF)
 
     # E -> T + . E
     # E -> . T + E
     # E -> . T
     # T -> . x
-    @args(state_4())
-    def test_state_4_entries(self):
+    @args(lr0_state_4())
+    def test_lr0_state_4_entries(self):
         self.assert_state_entries(x, E, T)
 
-    @args(state_5())
-    def test_state_5_entries(self):
+    @args(lr0_state_5())
+    def test_lr0_state_5_entries(self):
         # T -> x .
         self.assert_state_entries(PLUS, EOF)
 
     # E -> T + E .
-    @args(state_6())
-    def test_state_6_entries(self):
+    @args(lr0_state_6())
+    def test_lr0_state_6_entries(self):
         self.assert_state_entries(EOF)
 
 
@@ -297,53 +297,53 @@ class TestSLRGeneratorGenerateActions(TestSLRGenerator):
     def assert_state_actions(self, *state_actions):
         self.assertCountEqual(self.result(), state_actions)
 
-    @args(state_1(), E)
-    def test_state_1_token_E(self):
-        self.assert_state_actions(shift(state_2()))
+    @args(lr0_state_1(), E)
+    def test_lr0_state_1_token_E(self):
+        self.assert_state_actions(shift(lr0_state_2()))
 
-    @args(state_1(), T)
-    def test_state_1_token_T(self):
-        self.assert_state_actions(shift(state_3()))
+    @args(lr0_state_1(), T)
+    def test_lr0_state_1_token_T(self):
+        self.assert_state_actions(shift(lr0_state_3()))
 
-    @args(state_1(), x)
-    def test_state_1_token_x(self):
-        self.assert_state_actions(shift(state_5()))
+    @args(lr0_state_1(), x)
+    def test_lr0_state_1_token_x(self):
+        self.assert_state_actions(shift(lr0_state_5()))
 
-    @args(state_2(), EOF)
-    def test_state_2_token_eof(self):
+    @args(lr0_state_2(), EOF)
+    def test_lr0_state_2_token_eof(self):
         self.assert_state_actions(accept())
 
-    @args(state_3(), PLUS)
-    def test_state_3_token_plus(self):
-        self.assert_state_actions(shift(state_4()))
+    @args(lr0_state_3(), PLUS)
+    def test_lr0_state_3_token_plus(self):
+        self.assert_state_actions(shift(lr0_state_4()))
 
-    @args(state_3(), EOF)
-    def test_state_3_token_eof(self):
-        self.assert_state_actions(reduce(rule_3))
+    @args(lr0_state_3(), EOF)
+    def test_lr0_state_3_token_eof(self):
+        self.assert_state_actions(reduce(rule_3_1))
 
-    @args(state_4(), x)
-    def test_state_4_token_x(self):
-        self.assert_state_actions(shift(state_5()))
+    @args(lr0_state_4(), x)
+    def test_lr0_state_4_token_x(self):
+        self.assert_state_actions(shift(lr0_state_5()))
 
-    @args(state_4(), E)
-    def test_state_4_token_E(self):
-        self.assert_state_actions(shift(state_6()))
+    @args(lr0_state_4(), E)
+    def test_lr0_state_4_token_E(self):
+        self.assert_state_actions(shift(lr0_state_6()))
 
-    @args(state_4(), T)
-    def test_state_4_token_T(self):
-        self.assert_state_actions(shift(state_3()))
+    @args(lr0_state_4(), T)
+    def test_lr0_state_4_token_T(self):
+        self.assert_state_actions(shift(lr0_state_3()))
 
-    @args(state_5(), PLUS)
-    def test_state_5_token_plus(self):
-        self.assert_state_actions(reduce(rule_4))
+    @args(lr0_state_5(), PLUS)
+    def test_lr0_state_5_token_plus(self):
+        self.assert_state_actions(reduce(rule_4_1))
 
-    @args(state_5(), EOF)
-    def test_state_5_token_eof(self):
-        self.assert_state_actions(reduce(rule_4))
+    @args(lr0_state_5(), EOF)
+    def test_lr0_state_5_token_eof(self):
+        self.assert_state_actions(reduce(rule_4_1))
 
-    @args(state_6(), EOF)
-    def test_state_6_token_eof(self):
-        self.assert_state_actions(reduce(rule_2))
+    @args(lr0_state_6(), EOF)
+    def test_lr0_state_6_token_eof(self):
+        self.assert_state_actions(reduce(rule_2_1))
 
 
 class TestSLRGeneratorGenerateInitialState(TestSLRGenerator):
@@ -351,4 +351,4 @@ class TestSLRGeneratorGenerateInitialState(TestSLRGenerator):
         return self.generator().generate().initial_state
 
     def test_initial_state(self):
-        self.assertResult(state_1())
+        self.assertResult(lr0_state_1())

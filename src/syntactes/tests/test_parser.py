@@ -12,8 +12,8 @@ from syntactes.tests.data import (
     EOF,
     PLUS,
     lr0_parsing_table,
-    rule_2,
-    rule_4,
+    rule_2_1,
+    rule_4_1,
     slr_parsing_table,
     x,
 )
@@ -76,7 +76,7 @@ class TestLR0ParserParseExecutables(TestLR0Parser):
 
     def setUp(self):
         self.sum = 0
-        self.add = execute_on(rule_2)(self.add)
+        self.add = execute_on(rule_2_1)(self.add)
         super().setUp()
 
     @args(x, PLUS, x, EOF)
@@ -102,8 +102,8 @@ class TestLR0ParserParseExecutablesTokenValues(TestLR0Parser):
     def setUp(self):
         self.sum = 0
         self.stack = list()
-        execute_on(rule_4)(self.push)
-        execute_on(rule_2)(self.add)
+        execute_on(rule_4_1)(self.push)
+        execute_on(rule_2_1)(self.add)
         super().setUp()
 
     def tearDown(self):
