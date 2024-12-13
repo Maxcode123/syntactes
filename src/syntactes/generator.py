@@ -1,72 +1,49 @@
+from abc import ABC, abstractmethod
+from typing import Optional, Type
+
 from syntactes import Grammar, Token
 from syntactes._action import Action
-from syntactes._item import LR0Item
-from syntactes._state import LR0State
-from syntactes.parsing_table import Entry, LR0ParsingTable, SLRParsingTable
+from syntactes._item import Item, LR0Item, LR1Item
+from syntactes._state import LR0State, LR1State, State
+from syntactes.parsing_table import (
+    Entry,
+    LR0ParsingTable,
+    LR1ParsingTable,
+    ParsingTable,
+    SLRParsingTable,
+)
 
 
-class LR0Generator:
-    """
-    Generator of LR0 parsing tables.
-    """
+class Generator(ABC):
+    table_cls: Type[ParsingTable]
+    state_cls: Type[State]
+    item_cls: Type[Item]
 
     def __init__(self, grammar: Grammar) -> None:
         self.grammar = grammar
 
-    def generate(self) -> LR0ParsingTable:
+    @abstractmethod
+    def closure(self, items: set[Item]) -> set[Item]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def goto(self, items: set[Item], token: Token) -> set[Item]:
+        raise NotImplementedError()
+
+    def generate(self) -> ParsingTable:
         """
-        Generates an LR0 parsing table for the configured grammar.
+        Generates an parsing table for the configured grammar.
         """
         states, shift_entries = self._create_states_and_shift_entries()
         reduce_entries = self._create_reduce_entries(states)
 
         entries = shift_entries | reduce_entries
 
-        table = LR0ParsingTable.from_entries(entries, self.grammar)
+        table = self.table_cls.from_entries(entries, self.grammar)
 
         return table
 
-    def closure(self, items: set[LR0Item]) -> set[LR0Item]:
-        """
-        Computes and returns the closure for the given set of items.
-
-        The closure operation adds more items to a set of items when there
-        is a dot to the left of a non-terminal symbol.
-
-        e.g.
-        for any item S -> . E in the given items, closure adds E -> . T
-        and T -> . x, where E -> T and T -> x are production rules.
-        """
-        _set = {item for item in items}
-
-        for item in items:
-            if item.dot_is_last():
-                continue
-
-            new_items = self._get_related_items(item.after_dot)
-            _set |= new_items
-
-        return _set
-
-    def goto(self, items: set[LR0Item], token: Token) -> set[LR0Item]:
-        """
-        Computes and returns the GOTO set for the given set of items.
-
-        The goto operation creates a set where all items have the dot past the
-        given symbol.
-        """
-        _set: set[LR0Item] = set()
-
-        for item in items:
-            if item.dot_is_last() or item.after_dot != token:
-                continue
-
-            next_item = LR0Item(item.rule, item.position + 1)
-            _set.add(next_item)
-
-        return self.closure(_set)
-
-    def get_states(self) -> set[LR0State]:
+    def get_states(self) -> set[State]:
         """
         Returns the set of automaton states for the configured grammar.
         """
@@ -148,33 +125,14 @@ class LR0Generator:
 
         return _set
 
-    def _get_related_items(self, symbol: Token) -> set[LR0Item]:
-        """
-        e.g. the items X -> .g, Y -> .p would be returned for the below grammar rules:
-        1. X -> g
-        2. X -> Y
-        3. Y -> p
-        where 'g' and 'p' are terminals.
-        """
-        _set: set[LR0Item] = set()
-
-        for rule in self.grammar.rules:
-            if rule.lhs == symbol:
-                _set.add(LR0Item(rule, 0))
-
-                if rule.rhs_len == 1 and not rule.rhs[0].is_terminal:
-                    _set |= self._get_related_items(rule.rhs[0])
-
-        return _set
-
-    def _create_states_and_shift_entries(self) -> tuple[set[LR0State], set[Entry]]:
+    def _create_states_and_shift_entries(self) -> tuple[set[State], set[Entry]]:
         """
         Computes and returns the states and entries for shift actions.
         """
         states, entries = dict(), set()
 
-        initial_items = self.closure({LR0Item(self.grammar.starting_rule, 0)})
-        initial_state = LR0State.from_items(initial_items)
+        initial_items = self._create_initial_items()
+        initial_state = self.state_cls.from_items(initial_items)
         initial_state.set_number(1)
         states[initial_state] = 1
 
@@ -187,8 +145,8 @@ class LR0Generator:
         return set(states.keys()), entries
 
     def _extend_states_and_shift_entries(
-        self, states: dict[LR0State, int], entries: set[Entry]
-    ) -> tuple[dict[LR0State, int], set[Entry]]:
+        self, states: dict[State, int], entries: set[Entry]
+    ) -> tuple[dict[State, int], set[Entry]]:
         """
         Extends states and entries following the below algorithm:
 
@@ -218,7 +176,7 @@ class LR0Generator:
                 if len(new_items) == 0:
                     continue
 
-                new = LR0State.from_items(new_items)
+                new = self.state_cls.from_items(new_items)
 
                 number = _states.setdefault(new, len(_states) + 1)
                 new.set_number(number)
@@ -226,6 +184,90 @@ class LR0Generator:
                 _entries.add(Entry(state, item.after_dot, Action.shift(new)))
 
         return _states, _entries
+
+    @abstractmethod
+    def _create_initial_items(self) -> set[Item]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def _create_reduce_entries(self, states: set[State]) -> set[Entry]:
+        raise NotImplementedError()
+
+
+class LR0Generator(Generator):
+    """
+    Generator of LR0 parsing tables.
+    """
+
+    table_cls = LR0ParsingTable
+    state_cls = LR0State
+    item_cls = LR0Item
+
+    def closure(self, items: set[LR0Item]) -> set[LR0Item]:
+        """
+        Computes and returns the closure for the given set of items.
+
+        The closure operation adds more items to a set of items when there
+        is a dot to the left of a non-terminal symbol.
+
+        e.g.
+        for any item S -> . E in the given items, closure adds E -> . T
+        and T -> . x, where E -> T and T -> x are production rules.
+        """
+        _set = {item for item in items}
+        __set = set()
+
+        while __set != _set:
+            __set = {i for i in _set}
+
+            for item in items:
+                if item.dot_is_last():
+                    continue
+
+                new_items = self._get_related_items(item.after_dot)
+                _set |= new_items
+
+        return _set
+
+    def goto(self, items: set[LR0Item], token: Token) -> set[LR0Item]:
+        """
+        Computes and returns the GOTO set for the given set of items.
+
+        The goto operation creates a set where all items have the dot past the
+        given symbol.
+        """
+        _set: set[LR0Item] = set()
+
+        for item in items:
+            if item.dot_is_last() or item.after_dot != token:
+                continue
+
+            next_item = LR0Item(item.rule, item.position + 1)
+            _set.add(next_item)
+
+        return self.closure(_set)
+
+    def _get_related_items(self, symbol: Token) -> set[LR0Item]:
+        """
+        e.g. the items X -> .g, Y -> .p would be returned for the below grammar rules:
+        1. X -> g
+        2. X -> Y
+        3. Y -> p
+        where 'g' and 'p' are terminals.
+        """
+        _set: set[LR0Item] = set()
+
+        for rule in self.grammar.rules:
+            if rule.lhs == symbol:
+                _set.add(LR0Item(rule, 0))
+
+                if rule.rhs_len == 1 and not rule.rhs[0].is_terminal:
+                    _set |= self._get_related_items(rule.rhs[0])
+
+        return _set
+
+    def _create_initial_items(self) -> set[LR0Item]:
+        return self.closure({LR0Item(self.grammar.starting_rule, 0)})
 
     def _create_reduce_entries(self, states: set[LR0State]) -> set[Entry]:
         """
@@ -249,18 +291,7 @@ class LR0Generator:
 
 
 class SLRGenerator(LR0Generator):
-    def generate(self) -> SLRParsingTable:
-        """
-        Generates an SLR parsing table for the configured grammar.
-        """
-        states, shift_entries = self._create_states_and_shift_entries()
-        reduce_entries = self._create_reduce_entries(states)
-
-        entries = shift_entries | reduce_entries
-
-        table = SLRParsingTable.from_entries(entries, self.grammar)
-
-        return table
+    table_cls = SLRParsingTable
 
     def _create_reduce_entries(self, states: set[LR0State]) -> set[Entry]:
         """
@@ -280,3 +311,101 @@ class SLRGenerator(LR0Generator):
                     entries.add(Entry(state, token, Action.reduce(item.rule)))
 
         return entries
+
+
+class LR1Generator(Generator):
+    table_cls = LR1ParsingTable
+    state_cls = LR1State
+    item_cls = LR1Item
+
+    def closure(self, items: set[LR1Item]) -> set[LR1Item]:
+        """
+        Computes and returns the closure for the given set of items.
+
+        The closure operation adds more items to a set of items when there
+        is a dot to the left of a non-terminal symbol.
+        """
+        _set = {item for item in items}
+        __set = set()
+
+        while __set != _set:
+            __set = {i for i in _set}
+
+            for item in __set:
+                if item.dot_is_last():
+                    continue
+
+                if item.position + 1 < item.rule.rhs_len:
+                    next_symbol = item.rule.rhs[item.position + 1]
+                else:
+                    next_symbol = None
+
+                new_items = self._get_related_items(
+                    item.after_dot, next_symbol, item.lookahead_token
+                )
+                _set |= new_items
+
+        return _set
+
+    def goto(self, items: set[LR1Item], token: Token) -> set[LR1Item]:
+        """
+        Computes and returns the GOTO set for the given set of items.
+
+        The goto operation creates a set where all items have the dot past the
+        given symbol.
+        """
+        _set: set[LR1Item] = set()
+
+        for item in items:
+            if item.dot_is_last() or item.after_dot != token:
+                continue
+
+            next_item = LR1Item(item.rule, item.position + 1, item.lookahead_token)
+            _set.add(next_item)
+
+        return self.closure(_set)
+
+    def _get_related_items(
+        self, symbol: Token, next_symbol: Optional[Token], lookahead_token: Token
+    ) -> set[LR1Item]:
+        _set: set[LR1Item] = set()
+
+        if next_symbol is None:
+            lookaheads = (lookahead_token,)
+        else:
+            lookaheads = (next_symbol, lookahead_token)
+
+        for rule in self.grammar.rules:
+            if rule.lhs != symbol:
+                continue
+
+            for s in self._first(*lookaheads):
+                _set.add(LR1Item(rule, 0, s))
+
+                if rule.rhs_len == 1 and not rule.rhs[0].is_terminal:
+                    _set |= self._get_related_items(rule.rhs[0], None, s)
+
+        return _set
+
+    def _create_reduce_entries(self, states: set[LR1State]) -> set[Entry]:
+        """
+        Computes and returns the entries for reduce actions and the accept action.
+        """
+        entries: set[Entry] = set()
+
+        for state in states:
+            for item in state.items:
+                if item.after_dot == Token.eof():
+                    entries.add(Entry(state, Token.eof(), Action.accept()))
+
+                if not item.dot_is_last():
+                    continue
+
+                entries.add(
+                    Entry(state, item.lookahead_token, Action.reduce(item.rule))
+                )
+
+        return entries
+
+    def _create_initial_items(self) -> set[LR1Item]:
+        return self.closure({LR1Item(self.grammar.starting_rule, 0, Token.eof())})
