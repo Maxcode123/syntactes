@@ -73,9 +73,9 @@ class LR0Generator:
         states, _ = self._create_states_and_shift_entries()
         return states
 
-    def _first(self, symbol: Token) -> set[Token]:
+    def _first(self, *symbols) -> set[Token]:
         """
-        Computes and returns the FIRST set for the given symbol.
+        Computes and returns the FIRST set for the given symbols.
 
         The FIRST set of a symbol 'G' is the set of terminal symbols that are
         first in the right-hand side of a rule where 'G' is the left-hand side.
@@ -88,7 +88,19 @@ class LR0Generator:
         where M is either terminal or non-terminal and T is non-terminal.
         'a' would be included in the FIRST set because if rule 4 is substituted in
         rule 3, 'a' (which is a terminal) could be derived from 'G'.
+
+        The computation of the FIRST set looks very simple if symbols = X Y Z, it seems
+        as if Y and Z can be ignored and FIRST(X) is the only thing that matters.
+        But consider a grammar where X -> Y and Y -> ε. Because Y can produce the empty
+        string - and therefore X can produce the empty string - we find that FIRST(XYZ)
+        must include FIRST(Z). Therefore, in computing FIRST sets we must keep track of
+        which symbols can produce the empty string.
         """
+        if len(symbols) == 0:
+            return set()
+
+        symbol = symbols[0]
+
         if symbol.is_terminal:
             return {symbol}
 
@@ -98,10 +110,14 @@ class LR0Generator:
             if rule.lhs != symbol:
                 continue
 
+            if rule.has_null_rhs() and len(symbols) > 1:
+                _set |= self._first(symbols[1:])
+                continue
+
             if rule.rhs[0].is_terminal:
                 _set.add(rule.rhs[0])
             elif rule.rhs_len == 1:
-                _set |= self._first(rule.rhs[0])
+                _set |= self._first(*rule.rhs)
 
         return _set
 
