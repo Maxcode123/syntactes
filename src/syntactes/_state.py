@@ -1,6 +1,6 @@
 from typing import Iterable
 
-from syntactes._item import LR0Item
+from syntactes._item import LR0Item, LR1Item
 
 
 class LR0State:
@@ -45,7 +45,37 @@ class LR0State:
         return hash(frozenset(self.items))
 
     def __eq__(self, other) -> bool:
-        if not isinstance(other, LR0State):
+        if not isinstance(other, self.__class__):
             return False
 
         return self.items == other.items
+
+
+class LR1State(LR0State):
+    """
+    State of LR1 parser. An LR1 state is a set of LR1 items.
+    """
+
+    def __init__(self) -> None:
+        self.number = None
+        self.items = set()
+        self.is_final = False
+
+    @staticmethod
+    def from_items(items: Iterable[LR1Item]) -> "LR1State":
+        """
+        Create an LR1 state from a set of LR1 items.
+        """
+        state = LR1State()
+        {state.add_item(item) for item in items}
+
+        return state
+
+    def add_item(self, item: LR1Item) -> None:
+        """
+        Adds an item to the state.
+        """
+        self.items.add(item)
+
+    def __repr__(self) -> str:
+        return f"<LR1State: {self.number}>"
