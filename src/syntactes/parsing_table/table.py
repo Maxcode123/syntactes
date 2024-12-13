@@ -1,12 +1,23 @@
-from typing import Iterable, Optional, TypeAlias
+from typing import Iterable, Optional, Protocol, TypeAlias
 
 from syntactes import Grammar, Token
 from syntactes._action import Action
-from syntactes._state import LR0State
+from syntactes._state import LR0State, LR1State, State
 from syntactes.parsing_table import Conflict, Entry
 
 Row: TypeAlias = dict[Token, list[Action]]
 
+
+class ParsingTable(Protocol):
+    rows: dict[State, Row]
+    initial_state: State
+
+    @staticmethod
+    def from_entries(entries: Iterable[Entry], grammar: Grammar) -> "ParsingTable": ...
+
+    def get(self, state: State) -> Optional[Row]: ...
+
+    def get_actions(self, state: State, token: Token) -> Optional[list[Action]]: ...
 
 class LR0ParsingTable:
     """
@@ -19,13 +30,11 @@ class LR0ParsingTable:
         self._initial_state = None
 
     @staticmethod
-    def from_entries(
-        entries: Iterable[Entry], tokens: Iterable[Token]
-    ) -> "LR0ParsingTable":
+    def from_entries(entries: Iterable[Entry], grammar: Grammar) -> "LR0ParsingTable":
         """
         Create a parsing table from the given entries.
         """
-        table = LR0ParsingTable(tokens)
+        table = LR0ParsingTable(grammar)
         {table.add_entry(entry) for entry in entries}
         return table
 
@@ -133,3 +142,46 @@ class SLRParsingTable(LR0ParsingTable):
 
     def _header_str(self) -> str:
         return "SLR PARSING TABLE"
+
+
+class LR1ParsingTable(LR0ParsingTable):
+    """
+    Table that contains all the transitions from state to state with a symbol.
+    """
+
+    def __init__(self, grammar: Grammar) -> None:
+        self.rows: dict[LR1State, Row] = dict()
+        self._grammar = grammar
+        self._initial_state = None
+
+    @staticmethod
+    def from_entries(
+        entries: Iterable[Entry], tokens: Iterable[Token]
+    ) -> "LR1ParsingTable":
+        """
+        Create a parsing table from the given entries.
+        """
+        table = LR1ParsingTable(tokens)
+        {table.add_entry(entry) for entry in entries}
+        return table
+
+    @property
+    def initial_state(self) -> LR1State:
+        return self._initial_state
+
+    def get_actions(self, state: LR1State, token: Token) -> Optional[list[Action]]:
+        """
+        Get the actions from state with given number with `token`.
+        If there are no actions, returns None.
+        """
+        return self.rows.get(state, {}).get(token, None)
+
+    def get(self, state: LR1State) -> Optional[Row]:
+        """
+        Get the mapping of tokens to actions for the given state number.
+        Returns None if the state is not found.
+        """
+        return self.rows.get(state, None)
+
+    def _header_str(self) -> str:
+        return "LR1 PARSING TABLE"
