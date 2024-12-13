@@ -2,7 +2,7 @@ from syntactes import Grammar, Rule, Token
 from syntactes._action import Action
 from syntactes._item import LR0Item, LR1Item
 from syntactes._state import LR0State, LR1State
-from syntactes.parsing_table import Entry, LR0ParsingTable, SLRParsingTable
+from syntactes.parsing_table import Entry, LR0ParsingTable, SLRParsingTable, LR1ParsingTable
 
 EOF = Token.eof()
 S = Token("S", False)
@@ -250,3 +250,32 @@ def lr1_state_12():
     state = LR1State.from_items({item_1})
     state.set_number(12)
     return state
+
+
+def lr1_parsing_table():
+    table = LR1ParsingTable(grammar_1)
+    table.add_entry(Entry(lr1_state_1(), L, Action.shift(lr1_state_2())))
+    table.add_entry(Entry(lr1_state_1(), C, Action.shift(lr1_state_3())))
+    table.add_entry(Entry(lr1_state_1(), LPAREN, Action.shift(lr1_state_4())))
+    table.add_entry(Entry(lr1_state_2(), C, Action.shift(lr1_state_5())))
+    table.add_entry(Entry(lr1_state_2(), LPAREN, Action.shift(lr1_state_4())))
+    table.add_entry(Entry(lr1_state_2(), EOF, Action.accept()))
+    table.add_entry(Entry(lr1_state_3(), LPAREN, Action.reduce(rule_3_2)))
+    table.add_entry(Entry(lr1_state_3(), EOF, Action.reduce(rule_3_2)))
+    table.add_entry(Entry(lr1_state_4(), C, Action.shift(lr1_state_6())))
+    table.add_entry(Entry(lr1_state_4(), LPAREN, Action.shift(lr1_state_7())))
+    table.add_entry(Entry(lr1_state_4(), RPAREN, Action.shift(lr1_state_8())))
+    table.add_entry(Entry(lr1_state_5(), LPAREN, Action.reduce(rule_2_2)))
+    table.add_entry(Entry(lr1_state_5(), RPAREN, Action.reduce(rule_2_2)))
+    table.add_entry(Entry(lr1_state_6(), RPAREN, Action.shift(lr1_state_9())))
+    table.add_entry(Entry(lr1_state_7(), LPAREN, Action.shift(lr1_state_7())))
+    table.add_entry(Entry(lr1_state_7(), RPAREN, Action.shift(lr1_state_11())))
+    table.add_entry(Entry(lr1_state_7(), C, Action.shift(lr1_state_10())))
+    table.add_entry(Entry(lr1_state_8(), LPAREN, Action.reduce(rule_5_2)))
+    table.add_entry(Entry(lr1_state_8(), EOF, Action.reduce(rule_5_2)))
+    table.add_entry(Entry(lr1_state_9(), LPAREN, Action.reduce(rule_4_2)))
+    table.add_entry(Entry(lr1_state_9(), EOF, Action.reduce(rule_4_2)))
+    table.add_entry(Entry(lr1_state_10(), RPAREN, Action.shift(lr1_state_12)))
+    table.add_entry(Entry(lr1_state_11(), RPAREN, Action.reduce(rule_5_2)))
+    table.add_entry(Entry(lr1_state_12(), RPAREN, Action.reduce(rule_4_2)))
+    return table
