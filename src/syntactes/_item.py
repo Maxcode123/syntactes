@@ -1,7 +1,12 @@
-from typing import Optional
+from typing import Optional, Protocol
 
 from syntactes.rule import Rule
 from syntactes.token import Token
+
+
+class Item(Protocol):
+    rule: Rule
+    position: int
 
 
 class LR0Item:
