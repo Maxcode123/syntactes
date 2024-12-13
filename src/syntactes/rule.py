@@ -15,6 +15,9 @@ class Rule:
         self.rhs = args
         self.rhs_len = len(args)
 
+    def has_null_rhs(self) -> bool:
+        return self.rhs_len == 1 and self.rhs[0] == Token.null()
+
     def __repr__(self) -> str:
         return f"<Rule: {self}>"
 
