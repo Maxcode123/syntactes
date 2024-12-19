@@ -4,14 +4,18 @@ from syntactes import Token
 from syntactes.parser import (
     ExecutablesRegistry,
     LR0Parser,
+    LR1Parser,
     ParserError,
     SLRParser,
     execute_on,
 )
 from syntactes.tests.data import (
     EOF,
+    LPAREN,
     PLUS,
+    RPAREN,
     lr0_parsing_table,
+    lr1_parsing_table,
     rule_2_1,
     rule_4_1,
     slr_parsing_table,
@@ -144,3 +148,31 @@ class TestSLRParserParse(TestSLRParser):
     @args(x, PLUS, x, EOF)
     def test_x_plus_x(self):
         self.result()
+
+
+class TestLR1Parser(TestCase):
+    def parser(self):
+        return self._parser
+
+    def setUp(self):
+        self._parser = LR1Parser(lr1_parsing_table())
+
+    def assert_parser_error(self):
+        self.assertResultRaises(ParserError)
+
+
+class TestLR1ParserParse(TestLR1Parser):
+    def subject(self, *stream):
+        return self.parser().parse(stream)
+
+    @args(LPAREN, RPAREN)
+    def test_no_eof_raises(self):
+        self.assert_parser_error()
+
+    @args(LPAREN, RPAREN, EOF)
+    def test_valid_syntax_does_not_raise(self):
+        self.result()
+
+    @args(LPAREN, RPAREN, RPAREN, EOF)
+    def test_invalid_syntax_raises(self):
+        self.assert_parser_error()
