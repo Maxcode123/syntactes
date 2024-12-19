@@ -1,7 +1,8 @@
+from abc import ABC
 from collections import deque
-from typing import Iterable
+from typing import Iterable, Type
 
-from syntactes import Grammar, LR0Generator, SLRGenerator, Token
+from syntactes import Grammar, LR0Generator, LR1Generator, SLRGenerator, Token
 from syntactes._action import Action, ActionType
 from syntactes._state import LR0State
 from syntactes.parser import (
@@ -10,28 +11,26 @@ from syntactes.parser import (
     ParserError,
     UnexpectedTokenError,
 )
-from syntactes.parsing_table import LR0ParsingTable
+from syntactes.parsing_table import ParsingTable
 
 
-class LR0Parser:
-    """
-    Parses streams of tokens based on the configured parsing table.
-    """
+class Parser(ABC):
+    generator_cls: Type
 
-    def __init__(self, table: LR0ParsingTable) -> None:
+    def __init__(self, table: ParsingTable) -> None:
         self._table = table
         self._token_stack: deque[Token] = deque()
         self._state_stack: deque[LR0State] = deque()
         self._token_stream: deque[Token] = deque()
 
-    @staticmethod
-    def from_grammar(grammar: Grammar) -> "LR0Parser":
+    @classmethod
+    def from_grammar(cls, grammar: Grammar) -> "Parser":
         """
         Create a parser for the given grammar.
         """
-        generator = LR0Generator(grammar)
+        generator = cls.generator_cls(grammar)
         parsing_table = generator.generate()
-        parser = LR0Parser(parsing_table)
+        parser = cls(parsing_table)
         return parser
 
     def parse(self, stream: Iterable[Token]) -> None:
@@ -107,17 +106,13 @@ class LR0Parser:
         raise error from None
 
 
-class SLRParser(LR0Parser):
-    """
-    Parses streams of tokens based on the configured parsing table.
-    """
+class LR0Parser(Parser):
+    generator_cls = LR0Generator
 
-    @staticmethod
-    def from_grammar(grammar: Grammar) -> "SLRParser":
-        """
-        Create a parser for the given grammar.
-        """
-        generator = SLRGenerator(grammar)
-        parsing_table = generator.generate()
-        parser = SLRParser(parsing_table)
-        return parser
+
+class SLRParser(Parser):
+    generator_cls = SLRGenerator
+
+
+class LR1Parser(Parser):
+    generator_cls = LR1Generator
