@@ -88,7 +88,7 @@ class Generator(ABC):
                 continue
 
             if rule.has_null_rhs() and len(symbols) > 1:
-                _set |= self._first(symbols[1:])
+                _set |= self._first(*symbols[1:])
                 continue
 
             if rule.rhs[0].is_terminal:
