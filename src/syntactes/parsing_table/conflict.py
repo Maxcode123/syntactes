@@ -2,7 +2,7 @@ from enum import Enum
 
 from syntactes import Token
 from syntactes._action import Action, ActionType
-from syntactes._state import LR0State
+from syntactes._state import State
 
 
 class ConflictType(Enum):
@@ -13,7 +13,7 @@ class ConflictType(Enum):
 
 
 class Conflict:
-    def __init__(self, state: LR0State, token: Token, actions: list[Action]) -> None:
+    def __init__(self, state: State, token: Token, actions: list[Action]) -> None:
         self.state = state
         self.token = token
         self.actions = actions
