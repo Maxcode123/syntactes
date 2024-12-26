@@ -63,4 +63,4 @@ class Conflict:
         return f"<Conflict: {str(self)}>"
 
     def __str__(self) -> str:
-        return f"{self.state}, {self.token}, {self.actions}"
+        return f"{self.conflict_type}, {self.state}, {self.token}, {self.actions}"
