@@ -6,8 +6,10 @@ from syntactes.parser import (
     ExecutablesRegistry,
     LR0Parser,
     LR1Parser,
+    NotAcceptedError,
     ParserError,
     SLRParser,
+    UnexpectedTokenError,
     execute_on,
 )
 from syntactes.tests.data import (
@@ -82,7 +84,7 @@ class TestLR0ParserParseExecutables(TestLR0Parser):
         self.parser().parse(stream)
         return self.sum
 
-    def add(self, _right, _plus, _left):
+    def add(self, _left, _plus, _right):
         self.sum += 1
 
     def setUp(self):
@@ -147,6 +149,18 @@ class TestSLRParser(TestCase):
 class TestSLRParserParse(TestSLRParser):
     def subject(self, *stream):
         return self.parser().parse(stream)
+
+    @args()
+    def test_empty_stream_raises(self):
+        self.assertResultRaises(NotAcceptedError)
+
+    @args(x, PLUS, x)
+    def test_no_eof_raises(self):
+        self.assertResultRaises(NotAcceptedError)
+
+    @args(x, EOF, x)
+    def test_tokens_after_eof_raise(self):
+        self.assertResultRaises(UnexpectedTokenError)
 
     @args(x, x, EOF)
     def test_x_x_eof_raises(self):
@@ -242,3 +256,58 @@ class TestSLRParserAmbiguousGrammar(TestCase):
     @args(x, PLUS, x, PLUS, x, EOF)
     def test_right_associative(self):
         self.assertResult("x x x r r")
+
+
+class TestSLRParserParseTwice(TestSLRParser):
+    def subject(self, first, second):
+        try:
+            self.parser().parse(first)
+        except ParserError:
+            pass
+
+        return self.parser().parse(second)
+
+    @args([x, PLUS, x, EOF], [x, EOF])
+    def test_after_valid_stream(self):
+        self.result()
+
+    @args([x, PLUS, PLUS], [x, EOF])
+    def test_after_invalid_stream(self):
+        self.result()
+
+    @args([x, PLUS], [x, EOF])
+    def test_after_unfinished_stream(self):
+        self.result()
+
+
+class TestSLRParserExpectedTokens(TestSLRParser):
+    def subject(self, *stream):
+        try:
+            self.parser().parse(stream)
+        except UnexpectedTokenError as e:
+            return e.expected_tokens
+
+    # T -> x . expects + or $
+    @args(x, x, EOF)
+    def test_terminals_sorted(self):
+        self.assertResult([EOF, PLUS])
+
+    # E -> T + . E expects x, not the non-terminals E and T
+    @args(x, PLUS, PLUS, EOF)
+    def test_without_non_terminals(self):
+        self.assertResult([x])
+
+
+class TestSLRParserReduceArguments(TestSLRParser):
+    def subject(self, *stream):
+        self.received = []
+        execute_on(rule_2_1)(lambda *args: self.received.append(args))
+        self.parser().parse(stream)
+        return [tuple(map(str, args)) for args in self.received]
+
+    def tearDown(self):
+        ExecutablesRegistry.clear()
+
+    @args(x, PLUS, x, EOF)
+    def test_rhs_order(self):
+        self.assertResult([("T", "+", "E")])
