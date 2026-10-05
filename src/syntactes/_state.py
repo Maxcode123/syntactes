@@ -1,9 +1,7 @@
 from collections.abc import Iterable
-from typing import Protocol, TypeVar
+from typing import Protocol, Self
 
 from syntactes._item import LR0Item, LR1Item
-
-_StateT = TypeVar("_StateT", bound="LR0State")
 
 
 class State(Protocol):
@@ -26,7 +24,7 @@ class LR0State:
         self.is_final = False
 
     @classmethod
-    def from_items(cls: type[_StateT], items: Iterable[LR0Item]) -> _StateT:
+    def from_items(cls, items: Iterable[LR0Item]) -> Self:
         """
         Create a state from a set of items.
         """

@@ -1,10 +1,10 @@
 import functools
 from collections.abc import Callable
-from typing import ClassVar, TypeAlias
+from typing import ClassVar
 
 from syntactes import Rule
 
-Executable: TypeAlias = Callable[..., None]
+type Executable = Callable[..., None]
 
 
 def execute_on(rule: Rule):

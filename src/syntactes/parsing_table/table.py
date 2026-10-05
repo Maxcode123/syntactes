@@ -1,14 +1,12 @@
 from collections.abc import Iterable
-from typing import Protocol, TypeAlias, TypeVar
+from typing import Protocol, Self
 
 from syntactes import Grammar, Token
 from syntactes._action import Action
 from syntactes._state import LR0State
 from syntactes.parsing_table import Conflict, Entry
 
-Row: TypeAlias = dict[Token, list[Action]]
-
-_TableT = TypeVar("_TableT", bound="LR0ParsingTable")
+type Row = dict[Token, list[Action]]
 
 
 class ParsingTable(Protocol):
@@ -42,9 +40,7 @@ class LR0ParsingTable:
         self._initial_state: LR0State | None = None
 
     @classmethod
-    def from_entries(
-        cls: type[_TableT], entries: Iterable[Entry], grammar: Grammar
-    ) -> _TableT:
+    def from_entries(cls, entries: Iterable[Entry], grammar: Grammar) -> Self:
         """
         Create a parsing table from the given entries.
         """
