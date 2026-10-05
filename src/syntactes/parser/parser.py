@@ -1,5 +1,5 @@
 from abc import ABC
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import cast
 
 from syntactes import (
@@ -13,11 +13,16 @@ from syntactes import (
 from syntactes._action import Action, ActionType
 from syntactes._state import LR0State
 from syntactes.parser import (
-    ExecutablesRegistry,
     NotAcceptedError,
     UnexpectedTokenError,
 )
 from syntactes.parsing_table import ParsingTable
+
+type Executable = Callable[..., object]
+
+
+def _do_nothing(*_: Token) -> None:
+    return None
 
 
 class Parser(ABC):
@@ -25,6 +30,7 @@ class Parser(ABC):
 
     def __init__(self, table: ParsingTable) -> None:
         self._table = table
+        self._executables: dict[Rule, Executable] = {}
 
     @classmethod
     def from_grammar(cls, grammar: Grammar) -> "Parser":
@@ -35,6 +41,25 @@ class Parser(ABC):
         parsing_table = generator.generate()
         parser = cls(parsing_table)
         return parser
+
+    def execute_on[F: Executable](self, rule: Rule) -> Callable[[F], F]:
+        """
+        Decorate a function to be executed when this parser reduces by `rule`.
+
+        The function is called with one token per right-hand side symbol of the
+        rule, and returns the value of the left-hand side token. The decorated
+        function is returned unchanged.
+
+        Raises `ValueError` if `rule` is not a rule of the parser's grammar.
+        """
+        if rule not in self._table.grammar.rules:
+            raise ValueError(f"Rule '{rule}' is not in the parser's grammar.")
+
+        def executable_decorator(executable_fn: F) -> F:
+            self._executables[rule] = executable_fn
+            return executable_fn
+
+        return executable_decorator
 
     def parse(self, stream: Iterable[Token]) -> object:
         """
@@ -74,7 +99,7 @@ class Parser(ABC):
                 args = self._pop(tokens, rule.rhs_len)
                 self._pop(states, rule.rhs_len)
 
-                value = ExecutablesRegistry.get(rule)(*args)
+                value = self._executable(rule)(*args)
 
                 tokens.append(Token(rule.lhs.symbol, False, value))
                 shift = self._get_action(states[-1], rule.lhs)
@@ -86,9 +111,12 @@ class Parser(ABC):
 
                 starting_rule = self._table.grammar.starting_rule
                 args = self._pop(tokens, starting_rule.rhs_len - 1)
-                return ExecutablesRegistry.get(starting_rule)(*args)
+                return self._executable(starting_rule)(*args)
 
         raise NotAcceptedError("Expected EOF token. ")
+
+    def _executable(self, rule: Rule) -> Executable:
+        return self._executables.get(rule, _do_nothing)
 
     @staticmethod
     def _pop[T](stack: list[T], count: int) -> list[T]:

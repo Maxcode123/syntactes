@@ -1,5 +1,5 @@
 from syntactes import Grammar, Rule, Token
-from syntactes.parser import ParserError, SLRParser, execute_on
+from syntactes.parser import ParserError, SLRParser
 
 EOF = Token.eof()
 S = Token("S", is_terminal=False)
@@ -26,7 +26,7 @@ grammar = Grammar(rule_1, rules, tokens)
 parser = SLRParser.from_grammar(grammar)
 
 
-@execute_on(rule_4)
+@parser.execute_on(rule_4)
 def push_value(x_token):
     # Add and argument for every token on the right-hand side of the rule.
     print(
@@ -34,7 +34,7 @@ def push_value(x_token):
     )
 
 
-@execute_on(rule_2)
+@parser.execute_on(rule_2)
 def add(left, plus, right):
     print(f"received tokens {left}, {plus}, {right}, reducing by rule: {rule_2}")
 

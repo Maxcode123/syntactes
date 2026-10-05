@@ -57,10 +57,11 @@ All code lives in `src/syntactes/`:
   `conflicts()`. The subclasses only change the header.
 - `parser/`:
   - `parser.py`: `LR0Parser`, `SLRParser` and `LR1Parser`, built from a table or
-    with `from_grammar()`. `parse(stream)` consumes tokens.
-  - `execute.py`: `@execute_on(rule)` registers a callback in
-    `ExecutablesRegistry`. On each reduction it's called with one argument per
-    RHS token.
+    with `from_grammar()`. `@parser.execute_on(rule)` registers a callback on
+    that parser. On each reduction it's called with one token per RHS symbol,
+    and its return value becomes the `value` of the pushed LHS token.
+    `parse(stream)` consumes tokens and returns the starting rule callback's
+    value.
   - `exception.py`: `ParserError` and its subclasses.
 - `tests/`: `data.py` holds the shared test grammars, rules, states and parsing
   tables. `test_generator.py` and `test_parser.py` use them.

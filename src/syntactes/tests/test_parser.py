@@ -3,14 +3,12 @@ from unittest_extensions import TestCase, args
 from syntactes import Token
 from syntactes._action import Action
 from syntactes.parser import (
-    ExecutablesRegistry,
     LR0Parser,
     LR1Parser,
     NotAcceptedError,
     ParserError,
     SLRParser,
     UnexpectedTokenError,
-    execute_on,
 )
 from syntactes.tests.data import (
     EOF,
@@ -25,6 +23,7 @@ from syntactes.tests.data import (
     lr0_state_1,
     lr1_parsing_table,
     rule_1_1,
+    rule_1_3,
     rule_2_1,
     rule_2_6,
     rule_3_1,
@@ -91,9 +90,9 @@ class TestLR0ParserParseExecutables(TestLR0Parser):
         self.sum += 1
 
     def setUp(self):
-        self.sum = 0
-        self.add = execute_on(rule_2_1)(self.add)
         super().setUp()
+        self.sum = 0
+        self.parser().execute_on(rule_2_1)(self.add)
 
     @args(x, PLUS, x, EOF)
     def test_x_plus_x(self):
@@ -106,24 +105,14 @@ class TestLR0ParserParseExecutables(TestLR0Parser):
 
 class TestLR0ParserParseExecutablesTokenValues(TestLR0Parser):
     def subject(self, *stream):
-        self.parser().parse(stream)
-        return self.sum
-
-    def push(self, x):
-        self.stack.append(x.value)
-
-    def add(self, x1, _plus, x2):
-        self.sum = self.stack.pop() + self.stack.pop()
+        return self.parser().parse(stream)
 
     def setUp(self):
-        self.sum = 0
-        self.stack = []
-        execute_on(rule_4_1)(self.push)
-        execute_on(rule_2_1)(self.add)
         super().setUp()
-
-    def tearDown(self):
-        ExecutablesRegistry.clear()
+        self.parser().execute_on(rule_1_1)(lambda e: e.value)
+        self.parser().execute_on(rule_2_1)(lambda t, _plus, e: t.value + e.value)
+        self.parser().execute_on(rule_3_1)(lambda t: t.value)
+        self.parser().execute_on(rule_4_1)(lambda x: x.value)
 
     @args(x1, PLUS, x1, EOF)
     def test_x1_plus_x1(self):
@@ -252,13 +241,11 @@ class TestParserResolveConflict(TestCase):
 class TestSLRParserAmbiguousGrammar(TestCase):
     def subject(self, *stream):
         reductions = []
-        execute_on(rule_2_6)(lambda *_: reductions.append("r"))
-        execute_on(rule_3_6)(lambda *_: reductions.append("x"))
-        SLRParser.from_grammar(grammar_6).parse(stream)
+        parser = SLRParser.from_grammar(grammar_6)
+        parser.execute_on(rule_2_6)(lambda *_: reductions.append("r"))
+        parser.execute_on(rule_3_6)(lambda *_: reductions.append("x"))
+        parser.parse(stream)
         return " ".join(reductions)
-
-    def tearDown(self):
-        ExecutablesRegistry.clear()
 
     @args(x, PLUS, x, PLUS, x, EOF)
     def test_right_associative(self):
@@ -308,12 +295,9 @@ class TestSLRParserExpectedTokens(TestSLRParser):
 class TestSLRParserReduceArguments(TestSLRParser):
     def subject(self, *stream):
         self.received = []
-        execute_on(rule_2_1)(lambda *args: self.received.append(args))
+        self.parser().execute_on(rule_2_1)(lambda *args: self.received.append(args))
         self.parser().parse(stream)
         return [tuple(map(str, args)) for args in self.received]
-
-    def tearDown(self):
-        ExecutablesRegistry.clear()
 
     @args(x, PLUS, x, EOF)
     def test_rhs_order(self):
@@ -324,14 +308,11 @@ class TestSLRParserValues(TestSLRParser):
     def subject(self, *stream):
         return self.parser().parse(stream)
 
-    def tearDown(self):
-        ExecutablesRegistry.clear()
-
     def register_evaluator(self):
-        execute_on(rule_1_1)(lambda e: e.value)
-        execute_on(rule_2_1)(lambda t, _plus, e: t.value + e.value)
-        execute_on(rule_3_1)(lambda t: t.value)
-        execute_on(rule_4_1)(lambda x: x.value)
+        self.parser().execute_on(rule_1_1)(lambda e: e.value)
+        self.parser().execute_on(rule_2_1)(lambda t, _plus, e: t.value + e.value)
+        self.parser().execute_on(rule_3_1)(lambda t: t.value)
+        self.parser().execute_on(rule_4_1)(lambda x: x.value)
 
     @args(x1, PLUS, x2, EOF)
     def test_evaluates_x1_plus_x2(self):
@@ -349,17 +330,17 @@ class TestSLRParserValues(TestSLRParser):
 
     @args(x1, EOF)
     def test_rule_without_callback_has_none_value(self):
-        execute_on(rule_1_1)(lambda e: ("E", e.value))
+        self.parser().execute_on(rule_1_1)(lambda e: ("E", e.value))
         self.assertResult(("E", None))
 
     @args(x1, PLUS, x2, EOF)
     def test_starting_rule_receives_no_eof(self):
-        execute_on(rule_1_1)(lambda *args: tuple(map(str, args)))
+        self.parser().execute_on(rule_1_1)(lambda *args: tuple(map(str, args)))
         self.assertResult(("E",))
 
     @args(x1, EOF)
     def test_callback_exception_propagates(self):
-        execute_on(rule_4_1)(lambda x: 1 / 0)
+        self.parser().execute_on(rule_4_1)(lambda x: 1 / 0)
         self.assertResultRaises(ZeroDivisionError)
 
     @args(x1, EOF)
@@ -375,3 +356,43 @@ class TestParsingTableGrammar(TestCase):
 
     def test_grammar(self):
         self.assertResultIs(grammar_1)
+
+
+def _callback(*_):
+    return None
+
+
+class TestParserExecuteOn(TestCase):
+    def subject(self, rule):
+        return SLRParser(slr_parsing_table()).execute_on(rule)(_callback)
+
+    @args(rule_2_1)
+    def test_returns_function_unchanged(self):
+        self.assertResultIs(_callback)
+
+    # E -> E + E is not a rule of grammar_1
+    @args(rule_2_6)
+    def test_unknown_rule_raises(self):
+        self.assertResultRaises(ValueError)
+
+
+class TestParserExecutablesArePerParser(TestCase):
+    def subject(self):
+        parser_1 = SLRParser.from_grammar(grammar_1)
+        parser_3 = SLRParser.from_grammar(grammar_3)
+        # S -> E $ is a rule of both grammars.
+        parser_1.execute_on(rule_1_1)(lambda _e: 1)
+        parser_3.execute_on(rule_1_3)(lambda _e: 3)
+        return parser_1.parse([x, EOF]), parser_3.parse([x, PLUS, x, EOF])
+
+    def test_callbacks_do_not_leak(self):
+        self.assertResult((1, 3))
+
+
+class TestParserExecutablesAreNotGlobal(TestCase):
+    def subject(self):
+        SLRParser.from_grammar(grammar_1).execute_on(rule_1_1)(lambda _e: 1)
+        return SLRParser.from_grammar(grammar_1).parse([x, EOF])
+
+    def test_other_parser_unaffected(self):
+        self.assertResultIs(None)
