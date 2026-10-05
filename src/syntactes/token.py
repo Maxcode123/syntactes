@@ -39,7 +39,7 @@ class Token:
 
     def __lt__(self, other) -> bool:
         if not isinstance(other, Token):
-            raise ValueError(
+            raise ValueError(  # noqa: TRY004 (public behaviour; TypeError would break callers)
                 f"'<' not supported between instances of 'Token' and {type(other).__name__}"
             )
 

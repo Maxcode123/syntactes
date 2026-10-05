@@ -1,4 +1,5 @@
-from typing import Iterable, Optional, Protocol, TypeAlias
+from collections.abc import Iterable
+from typing import Protocol, TypeAlias
 
 from syntactes import Grammar, Token
 from syntactes._action import Action
@@ -15,9 +16,10 @@ class ParsingTable(Protocol):
     @staticmethod
     def from_entries(entries: Iterable[Entry], grammar: Grammar) -> "ParsingTable": ...
 
-    def get(self, state: State) -> Optional[Row]: ...
+    def get(self, state: State) -> Row | None: ...
 
-    def get_actions(self, state: State, token: Token) -> Optional[list[Action]]: ...
+    def get_actions(self, state: State, token: Token) -> list[Action] | None: ...
+
 
 class LR0ParsingTable:
     """
@@ -25,7 +27,7 @@ class LR0ParsingTable:
     """
 
     def __init__(self, grammar: Grammar) -> None:
-        self.rows: dict[LR0State, Row] = dict()
+        self.rows: dict[LR0State, Row] = {}
         self._grammar = grammar
         self._initial_state = None
 
@@ -42,14 +44,14 @@ class LR0ParsingTable:
     def initial_state(self) -> LR0State:
         return self._initial_state
 
-    def get_actions(self, state: LR0State, token: Token) -> Optional[list[Action]]:
+    def get_actions(self, state: LR0State, token: Token) -> list[Action] | None:
         """
         Get the actions from state with given number with `token`.
         If there are no actions, returns None.
         """
         return self.rows.get(state, {}).get(token, None)
 
-    def get(self, state: LR0State) -> Optional[Row]:
+    def get(self, state: LR0State) -> Row | None:
         """
         Get the mapping of tokens to actions for the given state number.
         Returns None if the state is not found.
@@ -64,7 +66,7 @@ class LR0ParsingTable:
             self._initial_state = entry.from_state
 
         row = self.rows.setdefault(entry.from_state, {})
-        actions = row.setdefault(entry.token, list())
+        actions = row.setdefault(entry.token, [])
         actions.append(entry.action)
 
     def pretty_str(self) -> str:
@@ -96,9 +98,7 @@ class LR0ParsingTable:
     def _table_pretty_str(self) -> str:
         rows = []
         tokens = sorted(self._grammar.tokens)
-        for number, row in sorted(
-            map(lambda tpl: (tpl[0].number, tpl[1]), self.rows.items())
-        ):
+        for number, row in sorted((tpl[0].number, tpl[1]) for tpl in self.rows.items()):
             r = [str(number)]
             for token in sorted(tokens):
                 actions = row.get(token, [])
@@ -150,7 +150,7 @@ class LR1ParsingTable(LR0ParsingTable):
     """
 
     def __init__(self, grammar: Grammar) -> None:
-        self.rows: dict[LR1State, Row] = dict()
+        self.rows: dict[LR1State, Row] = {}
         self._grammar = grammar
         self._initial_state = None
 
@@ -169,14 +169,14 @@ class LR1ParsingTable(LR0ParsingTable):
     def initial_state(self) -> LR1State:
         return self._initial_state
 
-    def get_actions(self, state: LR1State, token: Token) -> Optional[list[Action]]:
+    def get_actions(self, state: LR1State, token: Token) -> list[Action] | None:
         """
         Get the actions from state with given number with `token`.
         If there are no actions, returns None.
         """
         return self.rows.get(state, {}).get(token, None)
 
-    def get(self, state: LR1State) -> Optional[Row]:
+    def get(self, state: LR1State) -> Row | None:
         """
         Get the mapping of tokens to actions for the given state number.
         Returns None if the state is not found.

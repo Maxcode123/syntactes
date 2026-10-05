@@ -1,10 +1,11 @@
-from typing import Iterable, Optional, Protocol
+from collections.abc import Iterable
+from typing import Protocol
 
 from syntactes._item import Item, LR0Item, LR1Item
 
 
 class State(Protocol):
-    number: Optional[int]
+    number: int | None
     items: set[Item]
 
 

@@ -1,4 +1,4 @@
-.PHONY: clean test install-local-package build-package upload-package
+.PHONY: clean test lint format install-local-package build-package upload-package
 
 clean:
 	rm -rf src/syntactes/__pycache__ src/syntactes/tests/__pycache__ src/syntactes/parser/__pycache__ src/syntactes/parsing_table/__pycache__
@@ -6,6 +6,12 @@ clean:
 
 test:
 	uv run python -m unittest discover -v src/syntactes/tests/
+
+lint:
+	uv run ruff check src
+
+format:
+	uv run ruff format src examples
 
 install-local-package:
 	uv pip install -e .

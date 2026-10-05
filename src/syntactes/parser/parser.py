@@ -1,6 +1,6 @@
 from abc import ABC
 from collections import deque
-from typing import Iterable, Type
+from collections.abc import Iterable
 
 from syntactes import Grammar, LR0Generator, LR1Generator, SLRGenerator, Token
 from syntactes._action import Action, ActionType
@@ -15,7 +15,7 @@ from syntactes.parsing_table import ParsingTable
 
 
 class Parser(ABC):
-    generator_cls: Type
+    generator_cls: type
 
     def __init__(self, table: ParsingTable) -> None:
         self._table = table

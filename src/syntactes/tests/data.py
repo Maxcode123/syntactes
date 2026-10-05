@@ -2,7 +2,12 @@ from syntactes import Grammar, Rule, Token
 from syntactes._action import Action
 from syntactes._item import LR0Item, LR1Item
 from syntactes._state import LR0State, LR1State
-from syntactes.parsing_table import Entry, LR0ParsingTable, SLRParsingTable, LR1ParsingTable
+from syntactes.parsing_table import (
+    Entry,
+    LR0ParsingTable,
+    LR1ParsingTable,
+    SLRParsingTable,
+)
 
 EOF = Token.eof()
 S = Token("S", False)

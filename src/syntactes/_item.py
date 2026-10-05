@@ -1,4 +1,4 @@
-from typing import Optional, Protocol
+from typing import Protocol
 
 from syntactes.rule import Rule
 from syntactes.token import Token
@@ -27,7 +27,7 @@ class LR0Item:
         return self.position == self.rule.rhs_len
 
     @property
-    def after_dot(self) -> Optional[Token]:
+    def after_dot(self) -> Token | None:
         """
         Returns the symbol after the dot in the current item.
         If the dot is in the last position, returns None
@@ -38,7 +38,7 @@ class LR0Item:
         return self.rule.rhs[self.position]
 
     @property
-    def before_dot(self) -> Optional[Token]:
+    def before_dot(self) -> Token | None:
         """
         Returns the symbol before the dot in the current item.
         If the dot is in the first position, returns None.

@@ -19,7 +19,7 @@ class Entry:
         self.action = action
 
     def __repr__(self) -> str:
-        return f"<Entry: {str(self)}>"
+        return f"<Entry: {self!s}>"
 
     def __str__(self) -> str:
         return f"{self.from_state.number}, {self.action}, {self.token}"

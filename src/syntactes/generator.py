@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Type
 
 from syntactes import Grammar, Token
 from syntactes._action import Action
@@ -15,9 +14,9 @@ from syntactes.parsing_table import (
 
 
 class Generator(ABC):
-    table_cls: Type[ParsingTable]
-    state_cls: Type[State]
-    item_cls: Type[Item]
+    table_cls: type[ParsingTable]
+    state_cls: type[State]
+    item_cls: type[Item]
 
     def __init__(self, grammar: Grammar) -> None:
         self.grammar = grammar
@@ -129,14 +128,14 @@ class Generator(ABC):
         """
         Computes and returns the states and entries for shift actions.
         """
-        states, entries = dict(), set()
+        states, entries = {}, set()
 
         initial_items = self._create_initial_items()
         initial_state = self.state_cls.from_items(initial_items)
         initial_state.set_number(1)
         states[initial_state] = 1
 
-        _states, _entries = dict(), set()
+        _states, _entries = {}, set()
         while (_states, _entries) != (states, entries):
             _states = {s: n for s, n in states.items()}
             _entries = {e for e in entries}
@@ -366,7 +365,7 @@ class LR1Generator(Generator):
         return self.closure(_set)
 
     def _get_related_items(
-        self, symbol: Token, next_symbol: Optional[Token], lookahead_token: Token
+        self, symbol: Token, next_symbol: Token | None, lookahead_token: Token
     ) -> set[LR1Item]:
         _set: set[LR1Item] = set()
 

@@ -1,4 +1,10 @@
-from .token import Token
-from .rule import Rule
-from .grammar import Grammar
-from .generator import LR0Generator, SLRGenerator, LR1Generator
+# isort: skip_file
+# Import order matters: later modules import the earlier ones from `syntactes`.
+from .token import Token as Token
+from .rule import Rule as Rule
+from .grammar import Grammar as Grammar
+from .generator import (
+    LR0Generator as LR0Generator,
+    SLRGenerator as SLRGenerator,
+    LR1Generator as LR1Generator,
+)

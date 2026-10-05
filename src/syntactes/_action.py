@@ -1,5 +1,5 @@
-from typing import Protocol
 from enum import Enum
+from typing import Protocol
 
 
 class Actionable(Protocol):
