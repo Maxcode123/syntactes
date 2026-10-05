@@ -2,7 +2,12 @@ from syntactes import Grammar, Rule, Token
 from syntactes._action import Action
 from syntactes._item import LR0Item, LR1Item
 from syntactes._state import LR0State, LR1State
-from syntactes.parsing_table import Entry, LR0ParsingTable, SLRParsingTable, LR1ParsingTable
+from syntactes.parsing_table import (
+    Entry,
+    LR0ParsingTable,
+    LR1ParsingTable,
+    SLRParsingTable,
+)
 
 EOF = Token.eof()
 S = Token("S", False)
@@ -275,7 +280,7 @@ def lr1_parsing_table():
     table.add_entry(Entry(lr1_state_8(), EOF, Action.reduce(rule_5_2)))
     table.add_entry(Entry(lr1_state_9(), LPAREN, Action.reduce(rule_4_2)))
     table.add_entry(Entry(lr1_state_9(), EOF, Action.reduce(rule_4_2)))
-    table.add_entry(Entry(lr1_state_10(), RPAREN, Action.shift(lr1_state_12)))
+    table.add_entry(Entry(lr1_state_10(), RPAREN, Action.shift(lr1_state_12())))
     table.add_entry(Entry(lr1_state_11(), RPAREN, Action.reduce(rule_5_2)))
     table.add_entry(Entry(lr1_state_12(), RPAREN, Action.reduce(rule_4_2)))
     return table

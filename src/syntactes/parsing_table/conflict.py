@@ -46,7 +46,7 @@ class Conflict:
         if not len(self.actions) > 1:
             return ConflictType.NO_CONFLICT
 
-        action_types = set(map(lambda a: a.action_type, self.actions))
+        action_types = {a.action_type for a in self.actions}
 
         if ActionType.SHIFT not in action_types:
             if ActionType.REDUCE not in action_types:
@@ -60,7 +60,7 @@ class Conflict:
         return ConflictType.SHIFT_REDUCE
 
     def __repr__(self) -> str:
-        return f"<Conflict: {str(self)}>"
+        return f"<Conflict: {self!s}>"
 
     def __str__(self) -> str:
         return f"{self.state}, {self.token}, {self.actions}"

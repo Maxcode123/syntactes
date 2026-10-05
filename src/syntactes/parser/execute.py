@@ -1,10 +1,10 @@
 import functools
 from collections.abc import Callable
-from typing import TypeAlias
+from typing import ClassVar, TypeAlias
 
 from syntactes import Rule
 
-Executable: TypeAlias = Callable[[...], None]
+Executable: TypeAlias = Callable[..., None]
 
 
 def execute_on(rule: Rule):
@@ -30,7 +30,7 @@ class ExecutablesRegistry:
     rule is recognized by the parser.
     """
 
-    _registry: dict[Rule, Executable] = {}
+    _registry: ClassVar[dict[Rule, Executable]] = {}
 
     @classmethod
     def register(cls, rule: Rule, executable_fn: Executable) -> None:

@@ -1,23 +1,35 @@
-from typing import Iterable, Optional, Protocol, TypeAlias
+from collections.abc import Iterable
+from typing import Protocol, TypeAlias, TypeVar
 
 from syntactes import Grammar, Token
 from syntactes._action import Action
-from syntactes._state import LR0State, LR1State, State
+from syntactes._state import LR0State
 from syntactes.parsing_table import Conflict, Entry
 
 Row: TypeAlias = dict[Token, list[Action]]
 
+_TableT = TypeVar("_TableT", bound="LR0ParsingTable")
+
 
 class ParsingTable(Protocol):
-    rows: dict[State, Row]
-    initial_state: State
+    rows: dict[LR0State, Row]
 
-    @staticmethod
-    def from_entries(entries: Iterable[Entry], grammar: Grammar) -> "ParsingTable": ...
+    @property
+    def initial_state(self) -> LR0State: ...
 
-    def get(self, state: State) -> Optional[Row]: ...
+    @classmethod
+    def from_entries(
+        cls, entries: Iterable[Entry], grammar: Grammar
+    ) -> "ParsingTable": ...
 
-    def get_actions(self, state: State, token: Token) -> Optional[list[Action]]: ...
+    def get(self, state: LR0State) -> Row | None: ...
+
+    def get_actions(self, state: LR0State, token: Token) -> list[Action] | None: ...
+
+    def pretty_str(self) -> str: ...
+
+    def conflicts(self) -> list[Conflict]: ...
+
 
 class LR0ParsingTable:
     """
@@ -25,31 +37,40 @@ class LR0ParsingTable:
     """
 
     def __init__(self, grammar: Grammar) -> None:
-        self.rows: dict[LR0State, Row] = dict()
+        self.rows: dict[LR0State, Row] = {}
         self._grammar = grammar
-        self._initial_state = None
+        self._initial_state: LR0State | None = None
 
-    @staticmethod
-    def from_entries(entries: Iterable[Entry], grammar: Grammar) -> "LR0ParsingTable":
+    @classmethod
+    def from_entries(
+        cls: type[_TableT], entries: Iterable[Entry], grammar: Grammar
+    ) -> _TableT:
         """
         Create a parsing table from the given entries.
         """
-        table = LR0ParsingTable(grammar)
+        table = cls(grammar)
         {table.add_entry(entry) for entry in entries}
         return table
 
     @property
     def initial_state(self) -> LR0State:
+        """
+        The state the parser starts from, i.e. the state with number 1.
+        Raises `ValueError` if the table has no entries from that state.
+        """
+        if self._initial_state is None:
+            raise ValueError("parsing table has no initial state")
+
         return self._initial_state
 
-    def get_actions(self, state: LR0State, token: Token) -> Optional[list[Action]]:
+    def get_actions(self, state: LR0State, token: Token) -> list[Action] | None:
         """
         Get the actions from state with given number with `token`.
         If there are no actions, returns None.
         """
         return self.rows.get(state, {}).get(token, None)
 
-    def get(self, state: LR0State) -> Optional[Row]:
+    def get(self, state: LR0State) -> Row | None:
         """
         Get the mapping of tokens to actions for the given state number.
         Returns None if the state is not found.
@@ -64,7 +85,7 @@ class LR0ParsingTable:
             self._initial_state = entry.from_state
 
         row = self.rows.setdefault(entry.from_state, {})
-        actions = row.setdefault(entry.token, list())
+        actions = row.setdefault(entry.token, [])
         actions.append(entry.action)
 
     def pretty_str(self) -> str:
@@ -96,9 +117,7 @@ class LR0ParsingTable:
     def _table_pretty_str(self) -> str:
         rows = []
         tokens = sorted(self._grammar.tokens)
-        for number, row in sorted(
-            map(lambda tpl: (tpl[0].number, tpl[1]), self.rows.items())
-        ):
+        for number, row in sorted((tpl[0].number, tpl[1]) for tpl in self.rows.items()):
             r = [str(number)]
             for token in sorted(tokens):
                 actions = row.get(token, [])
@@ -129,17 +148,6 @@ class LR0ParsingTable:
 
 
 class SLRParsingTable(LR0ParsingTable):
-    @staticmethod
-    def from_entries(
-        entries: Iterable[Entry], tokens: Iterable[Token]
-    ) -> "SLRParsingTable":
-        """
-        Create a parsing table from the given entries.
-        """
-        table = SLRParsingTable(tokens)
-        {table.add_entry(entry) for entry in entries}
-        return table
-
     def _header_str(self) -> str:
         return "SLR PARSING TABLE"
 
@@ -148,40 +156,6 @@ class LR1ParsingTable(LR0ParsingTable):
     """
     Table that contains all the transitions from state to state with a symbol.
     """
-
-    def __init__(self, grammar: Grammar) -> None:
-        self.rows: dict[LR1State, Row] = dict()
-        self._grammar = grammar
-        self._initial_state = None
-
-    @staticmethod
-    def from_entries(
-        entries: Iterable[Entry], tokens: Iterable[Token]
-    ) -> "LR1ParsingTable":
-        """
-        Create a parsing table from the given entries.
-        """
-        table = LR1ParsingTable(tokens)
-        {table.add_entry(entry) for entry in entries}
-        return table
-
-    @property
-    def initial_state(self) -> LR1State:
-        return self._initial_state
-
-    def get_actions(self, state: LR1State, token: Token) -> Optional[list[Action]]:
-        """
-        Get the actions from state with given number with `token`.
-        If there are no actions, returns None.
-        """
-        return self.rows.get(state, {}).get(token, None)
-
-    def get(self, state: LR1State) -> Optional[Row]:
-        """
-        Get the mapping of tokens to actions for the given state number.
-        Returns None if the state is not found.
-        """
-        return self.rows.get(state, None)
 
     def _header_str(self) -> str:
         return "LR1 PARSING TABLE"

@@ -35,3 +35,10 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/Maxcode123/syntactes"
 Issues = "https://github.com/Maxcode123/syntactes/issues"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.10",
+    "ty>=0.0.84",
+    "unittest-extensions>=0.4.0",
+]

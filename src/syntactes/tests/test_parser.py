@@ -105,7 +105,7 @@ class TestLR0ParserParseExecutablesTokenValues(TestLR0Parser):
 
     def setUp(self):
         self.sum = 0
-        self.stack = list()
+        self.stack = []
         execute_on(rule_4_1)(self.push)
         execute_on(rule_2_1)(self.add)
         super().setUp()

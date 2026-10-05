@@ -1,0 +1,143 @@
+# syntactes
+
+A simple Python parser generator. You give it a grammar (tokens and rules), and
+it builds LR0, SLR or LR1 parsing tables and parsers that run user callbacks on
+each reduction. It's a library published on PyPI. There's no docs site; the
+README is the documentation.
+
+## Commands
+
+Use uv for everything. Dev tools (unittest-extensions, ruff, ty) are in the `dev`
+dependency group, locked in `uv.lock`. Bare `python` doesn't work here, because
+there's no `.python-version` for pyenv. Always go through `uv run python …`.
+
+```sh
+make test          # whole unit suite (unittest discover)
+make lint          # ruff check
+make type-check    # ty
+make format        # ruff format (src and examples)
+uv run python -m unittest syntactes.tests.test_parser   # one module
+uv run python examples/parser.py                        # run an example
+```
+
+Before every commit, run `make test`, `make lint` and `make type-check`, and
+make sure `uv run ruff format --check src examples` is clean. CI
+(`.github/workflows/test-package.yml`) runs the same four checks on Python 3.10
+to 3.13, for pushes to `main` and `tester/*` and for PRs.
+
+Tooling notes:
+
+- ty and ruff target Python 3.10, which they take from `requires-python`.
+- `typing.Self` is 3.11+, so self-returning methods use a bound `TypeVar`
+  (ruff's `PYI019` is ignored in `ruff.toml`).
+- The `__init__.py` files use `# isort: skip_file`. Their import order resolves
+  the circular imports between package modules, so don't sort them.
+- State numbering and token order in output depend on set iteration, which
+  varies between runs. To compare output across changes, fix
+  `PYTHONHASHSEED`.
+
+## Architecture
+
+All code lives in `src/syntactes/`:
+
+- `token.py`: `Token` (a symbol, `is_terminal`, and an optional `value`), with
+  `Token.eof()` (`$`) and `Token.null()` (`ε`). Equality and hashing ignore
+  `value`.
+- `rule.py`: `Rule(number, lhs, *rhs)`.
+- `grammar.py`: `Grammar(starting_rule, rules, tokens)`.
+- `_item.py`, `_state.py`, `_action.py`: private LR0/LR1 items, states and
+  shift/reduce/accept actions. `LR1Item` subclasses `LR0Item` and `LR1State`
+  subclasses `LR0State`, so code typed with the LR0 classes accepts both. `State`
+  is a protocol.
+- `generator.py`: `LR0Generator`, `SLRGenerator` and `LR1Generator`. They compute
+  FIRST/FOLLOW sets (nullable symbols included), closures and gotos, and their
+  `generate()` returns a parsing table. `Generator` is generic over its item and
+  state types (`Generator[LR1Item, LR1State]`).
+- `parsing_table/`: `Entry`, `Conflict` / `ConflictType`, the `ParsingTable`
+  protocol, and the `LR0ParsingTable`, `SLRParsingTable` and `LR1ParsingTable`
+  classes. These have `from_entries(entries, grammar)`, `pretty_str()` and
+  `conflicts()`. The subclasses only change the header.
+- `parser/`:
+  - `parser.py`: `LR0Parser`, `SLRParser` and `LR1Parser`, built from a table or
+    with `from_grammar()`. `parse(stream)` consumes tokens.
+  - `execute.py`: `@execute_on(rule)` registers a callback in
+    `ExecutablesRegistry`. On each reduction it's called with one argument per
+    RHS token.
+  - `exception.py`: `ParserError` and its subclasses.
+- `tests/`: `data.py` holds the shared test grammars, rules, states and parsing
+  tables. `test_generator.py` and `test_parser.py` use them.
+
+`examples/` holds runnable scripts. They're not part of the package.
+
+## Rules
+
+- **No runtime dependencies** (`dependencies = []`). Use the stdlib only, and
+  that includes `typing_extensions`. Adding a runtime dependency needs explicit
+  approval. Dev-only tools go in the `dev` dependency group
+  (`uv add --dev …`).
+- **Python 3.10+** (`requires-python = ">=3.10"`, CI tests 3.10 to 3.13).
+  Don't use syntax or stdlib features newer than 3.10.
+- **The public API** is everything exported from `syntactes/__init__.py`,
+  `syntactes/parser/__init__.py` and `syntactes/parsing_table/__init__.py`, plus
+  the behaviour the README shows. Point out any breaking change and get
+  agreement before making it.
+- New public names go in the relevant `__init__.py`. Modules prefixed with `_`
+  are private.
+
+## Workflow
+
+- **Test first, always.** For every behaviour change or bug fix:
+  1. Write the tests.
+  2. Run them and watch them fail.
+  3. Implement until they pass.
+
+  Tests and implementation go in the same commit.
+- **Tests** use `unittest` with `unittest-extensions`. A test class defines
+  `subject(...)`, test methods are decorated with `@args(...)`, and they call
+  `self.result()`, `self.assertResult(...)` or
+  `self.assertResultRaises(...)`. Shared setup and assert helpers go on a base
+  `TestCase`. New grammars, states and tables go in `tests/data.py`.
+- **Git:**
+  - Always work on a branch, never directly on `main`.
+  - Make small atomic commits, each one passing the checks.
+  - Write commit subjects in the present tense, third person, e.g. "Adds …",
+    "Defines …", "Fixes …", "Increments version to X.Y.Z". Add a body
+    explaining *why* when it isn't obvious.
+  - Don't merge into `main`, push, tag or publish unless asked. When asked to
+    merge, use `git merge --no-ff <branch>` (message: `Merge branch '<branch>'`).
+- **Docs:** update `README.md` (and `examples/` if relevant) with every
+  user-facing change, on the same branch.
+- **Code style:**
+  - Formatting is ruff's (line length 88).
+  - Type hints everywhere, and ty must pass. Prefer real narrowing (e.g.
+    `if x is None`) over `cast`. Use `cast` only where an invariant can't be
+    expressed, like an action's `actionable` being a state for shifts and a
+    rule for reduces.
+  - Prefix private helpers and modules with `_`.
+  - Docstrings are triple-quoted, with the text starting on the next line.
+- `.envrc` holds secrets and is git-ignored. Never print it or commit it.
+
+## Release (only when asked)
+
+1. On the branch, set `version` in `pyproject.toml`, run `uv lock`, and commit
+   as "Increments version to X.Y.Z".
+2. Merge into `main` with `--no-ff`, run `make test`, then
+   `git push origin main`.
+3. Run `git tag vX.Y.Z` (with a `v` prefix, like the earlier tags), then
+   `git push origin vX.Y.Z`.
+4. Run `make clean build-package` (`uv build`). Check that `dist/` holds only
+   X.Y.Z, and that the wheel has what you expect (e.g. `unzip -l dist/*.whl`).
+   It should hold all subpackages and no `tests`.
+5. Run `make upload-package` (`uv publish`). It reads `UV_PUBLISH_TOKEN` from
+   `.envrc` (via direnv). Never print it.
+6. Verify from outside the repo, with `PYTHONPATH` unset:
+   `uvx --refresh --from syntactes==X.Y.Z python -c "import syntactes"`. Then
+   run an example against it.
+
+Pitfalls:
+
+- Never build unreleased code into `dist/` under an already-released version
+  number. To try a local build, use `uv build -o <scratch dir>`.
+- Because of `PYTHONPATH`, importing `syntactes` from the repo always loads
+  `src/`. To test the installed package, run from outside the repo with
+  `PYTHONPATH` unset.

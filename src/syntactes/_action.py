@@ -1,5 +1,5 @@
-from typing import Protocol
 from enum import Enum
+from typing import Protocol
 
 
 class Actionable(Protocol):
@@ -7,7 +7,8 @@ class Actionable(Protocol):
     State or Rule.
     """
 
-    number: int
+    @property
+    def number(self) -> int | None: ...
 
 
 class ActionType(Enum):
@@ -39,7 +40,7 @@ class Action:
     to the rule number for `Rule` actionables.
     """
 
-    def __init__(self, actionable: Actionable, action_type: ActionType) -> None:
+    def __init__(self, actionable: Actionable | None, action_type: ActionType) -> None:
         self.actionable = actionable
         self.action_type = action_type
 
@@ -68,7 +69,10 @@ class Action:
         return f"<Action: {self}>"
 
     def __str__(self) -> str:
-        if self.action_type in {ActionType.ACCEPT, ActionType.REJECT}:
+        if self.actionable is None or self.action_type in {
+            ActionType.ACCEPT,
+            ActionType.REJECT,
+        }:
             return str(self.action_type.abbreviated())
 
         return f"{self.action_type.abbreviated()}{self.actionable.number}"

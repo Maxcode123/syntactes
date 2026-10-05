@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Type
+from typing import Generic, TypeVar, cast
 
 from syntactes import Grammar, Token
 from syntactes._action import Action
-from syntactes._item import Item, LR0Item, LR1Item
-from syntactes._state import LR0State, LR1State, State
+from syntactes._item import LR0Item, LR1Item
+from syntactes._state import LR0State, LR1State
 from syntactes.parsing_table import (
     Entry,
     LR0ParsingTable,
@@ -13,21 +13,24 @@ from syntactes.parsing_table import (
     SLRParsingTable,
 )
 
+_ItemT = TypeVar("_ItemT", bound=LR0Item)
+_StateT = TypeVar("_StateT", bound=LR0State)
 
-class Generator(ABC):
-    table_cls: Type[ParsingTable]
-    state_cls: Type[State]
-    item_cls: Type[Item]
+
+class Generator(ABC, Generic[_ItemT, _StateT]):
+    table_cls: type[ParsingTable]
+    state_cls: type[_StateT]
+    item_cls: type[_ItemT]
 
     def __init__(self, grammar: Grammar) -> None:
         self.grammar = grammar
 
     @abstractmethod
-    def closure(self, items: set[Item]) -> set[Item]:
+    def closure(self, items: set[_ItemT]) -> set[_ItemT]:
         raise NotImplementedError()
 
     @abstractmethod
-    def goto(self, items: set[Item], token: Token) -> set[Item]:
+    def goto(self, items: set[_ItemT], token: Token) -> set[_ItemT]:
         raise NotImplementedError()
 
     def generate(self) -> ParsingTable:
@@ -43,14 +46,14 @@ class Generator(ABC):
 
         return table
 
-    def get_states(self) -> set[State]:
+    def get_states(self) -> set[_StateT]:
         """
         Returns the set of automaton states for the configured grammar.
         """
         states, _ = self._create_states_and_shift_entries()
         return states
 
-    def _first(self, *symbols) -> set[Token]:
+    def _first(self, *symbols: Token) -> set[Token]:
         """
         Computes and returns the FIRST set for the given symbols.
 
@@ -88,7 +91,7 @@ class Generator(ABC):
                 continue
 
             if rule.has_null_rhs() and len(symbols) > 1:
-                _set |= self._first(symbols[1:])
+                _set |= self._first(*symbols[1:])
                 continue
 
             if rule.rhs[0].is_terminal:
@@ -125,18 +128,18 @@ class Generator(ABC):
 
         return _set
 
-    def _create_states_and_shift_entries(self) -> tuple[set[State], set[Entry]]:
+    def _create_states_and_shift_entries(self) -> tuple[set[_StateT], set[Entry]]:
         """
         Computes and returns the states and entries for shift actions.
         """
-        states, entries = dict(), set()
+        states, entries = {}, set()
 
         initial_items = self._create_initial_items()
         initial_state = self.state_cls.from_items(initial_items)
         initial_state.set_number(1)
         states[initial_state] = 1
 
-        _states, _entries = dict(), set()
+        _states, _entries = {}, set()
         while (_states, _entries) != (states, entries):
             _states = {s: n for s, n in states.items()}
             _entries = {e for e in entries}
@@ -145,8 +148,8 @@ class Generator(ABC):
         return set(states.keys()), entries
 
     def _extend_states_and_shift_entries(
-        self, states: dict[State, int], entries: set[Entry]
-    ) -> tuple[dict[State, int], set[Entry]]:
+        self, states: dict[_StateT, int], entries: set[Entry]
+    ) -> tuple[dict[_StateT, int], set[Entry]]:
         """
         Extends states and entries following the below algorithm:
 
@@ -163,15 +166,19 @@ class Generator(ABC):
 
         EOF = Token.eof()
         for state in states:
-            for item in state.items:
-                if item.dot_is_last():
+            # A state's items are of the generator's item type, e.g. LR1State
+            # holds LR1Items, but the shared state base class can't express that.
+            items = cast(set[_ItemT], state.items)
+            for item in items:
+                after_dot = item.after_dot
+                if after_dot is None:
                     continue
 
-                if item.after_dot == EOF:
+                if after_dot == EOF:
                     state.set_final()
                     continue
 
-                new_items = self.goto(state.items, item.after_dot)
+                new_items = self.goto(items, after_dot)
 
                 if len(new_items) == 0:
                     continue
@@ -181,20 +188,20 @@ class Generator(ABC):
                 number = _states.setdefault(new, len(_states) + 1)
                 new.set_number(number)
 
-                _entries.add(Entry(state, item.after_dot, Action.shift(new)))
+                _entries.add(Entry(state, after_dot, Action.shift(new)))
 
         return _states, _entries
 
     @abstractmethod
-    def _create_initial_items(self) -> set[Item]:
+    def _create_initial_items(self) -> set[_ItemT]:
         raise NotImplementedError()
 
     @abstractmethod
-    def _create_reduce_entries(self, states: set[State]) -> set[Entry]:
+    def _create_reduce_entries(self, states: set[_StateT]) -> set[Entry]:
         raise NotImplementedError()
 
 
-class LR0Generator(Generator):
+class LR0Generator(Generator[LR0Item, LR0State]):
     """
     Generator of LR0 parsing tables.
     """
@@ -221,10 +228,11 @@ class LR0Generator(Generator):
             __set = {i for i in _set}
 
             for item in items:
-                if item.dot_is_last():
+                after_dot = item.after_dot
+                if after_dot is None:
                     continue
 
-                new_items = self._get_related_items(item.after_dot)
+                new_items = self._get_related_items(after_dot)
                 _set |= new_items
 
         return _set
@@ -313,7 +321,7 @@ class SLRGenerator(LR0Generator):
         return entries
 
 
-class LR1Generator(Generator):
+class LR1Generator(Generator[LR1Item, LR1State]):
     table_cls = LR1ParsingTable
     state_cls = LR1State
     item_cls = LR1Item
@@ -332,7 +340,8 @@ class LR1Generator(Generator):
             __set = {i for i in _set}
 
             for item in __set:
-                if item.dot_is_last():
+                after_dot = item.after_dot
+                if after_dot is None:
                     continue
 
                 if item.position + 1 < item.rule.rhs_len:
@@ -341,7 +350,7 @@ class LR1Generator(Generator):
                     next_symbol = None
 
                 new_items = self._get_related_items(
-                    item.after_dot, next_symbol, item.lookahead_token
+                    after_dot, next_symbol, item.lookahead_token
                 )
                 _set |= new_items
 
@@ -366,7 +375,7 @@ class LR1Generator(Generator):
         return self.closure(_set)
 
     def _get_related_items(
-        self, symbol: Token, next_symbol: Optional[Token], lookahead_token: Token
+        self, symbol: Token, next_symbol: Token | None, lookahead_token: Token
     ) -> set[LR1Item]:
         _set: set[LR1Item] = set()
 
