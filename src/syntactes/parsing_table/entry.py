@@ -1,10 +1,8 @@
-from typing import TypeAlias
-
 from syntactes import Token
 from syntactes._action import Action
 from syntactes._state import LR0State
 
-Row: TypeAlias = dict[Token, list[Action]]
+type Row = dict[Token, list[Action]]
 
 
 class Entry:

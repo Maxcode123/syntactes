@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar, cast
+from typing import cast
 
 from syntactes import Grammar, Token
 from syntactes._action import Action
@@ -13,24 +13,21 @@ from syntactes.parsing_table import (
     SLRParsingTable,
 )
 
-_ItemT = TypeVar("_ItemT", bound=LR0Item)
-_StateT = TypeVar("_StateT", bound=LR0State)
 
-
-class Generator(ABC, Generic[_ItemT, _StateT]):
+class Generator[ItemT: LR0Item, StateT: LR0State](ABC):
     table_cls: type[ParsingTable]
-    state_cls: type[_StateT]
-    item_cls: type[_ItemT]
+    state_cls: type[StateT]
+    item_cls: type[ItemT]
 
     def __init__(self, grammar: Grammar) -> None:
         self.grammar = grammar
 
     @abstractmethod
-    def closure(self, items: set[_ItemT]) -> set[_ItemT]:
+    def closure(self, items: set[ItemT]) -> set[ItemT]:
         raise NotImplementedError()
 
     @abstractmethod
-    def goto(self, items: set[_ItemT], token: Token) -> set[_ItemT]:
+    def goto(self, items: set[ItemT], token: Token) -> set[ItemT]:
         raise NotImplementedError()
 
     def generate(self) -> ParsingTable:
@@ -46,7 +43,7 @@ class Generator(ABC, Generic[_ItemT, _StateT]):
 
         return table
 
-    def get_states(self) -> set[_StateT]:
+    def get_states(self) -> set[StateT]:
         """
         Returns the set of automaton states for the configured grammar.
         """
@@ -128,7 +125,7 @@ class Generator(ABC, Generic[_ItemT, _StateT]):
 
         return _set
 
-    def _create_states_and_shift_entries(self) -> tuple[set[_StateT], set[Entry]]:
+    def _create_states_and_shift_entries(self) -> tuple[set[StateT], set[Entry]]:
         """
         Computes and returns the states and entries for shift actions.
         """
@@ -148,8 +145,8 @@ class Generator(ABC, Generic[_ItemT, _StateT]):
         return set(states.keys()), entries
 
     def _extend_states_and_shift_entries(
-        self, states: dict[_StateT, int], entries: set[Entry]
-    ) -> tuple[dict[_StateT, int], set[Entry]]:
+        self, states: dict[StateT, int], entries: set[Entry]
+    ) -> tuple[dict[StateT, int], set[Entry]]:
         """
         Extends states and entries following the below algorithm:
 
@@ -168,7 +165,7 @@ class Generator(ABC, Generic[_ItemT, _StateT]):
         for state in states:
             # A state's items are of the generator's item type, e.g. LR1State
             # holds LR1Items, but the shared state base class can't express that.
-            items = cast(set[_ItemT], state.items)
+            items = cast(set[ItemT], state.items)
             for item in items:
                 after_dot = item.after_dot
                 if after_dot is None:
@@ -193,11 +190,11 @@ class Generator(ABC, Generic[_ItemT, _StateT]):
         return _states, _entries
 
     @abstractmethod
-    def _create_initial_items(self) -> set[_ItemT]:
+    def _create_initial_items(self) -> set[ItemT]:
         raise NotImplementedError()
 
     @abstractmethod
-    def _create_reduce_entries(self, states: set[_StateT]) -> set[Entry]:
+    def _create_reduce_entries(self, states: set[StateT]) -> set[Entry]:
         raise NotImplementedError()
 
 

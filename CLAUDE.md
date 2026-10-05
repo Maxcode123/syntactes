@@ -22,14 +22,12 @@ uv run python examples/parser.py                        # run an example
 
 Before every commit, run `make test`, `make lint` and `make type-check`, and
 make sure `uv run ruff format --check src examples` is clean. CI
-(`.github/workflows/test-package.yml`) runs the same four checks on Python 3.10
-to 3.13, for pushes to `main` and `tester/*` and for PRs.
+(`.github/workflows/test-package.yml`) runs the same four checks on Python
+3.13, for pushes to `main` and `tester/*` and for PRs.
 
 Tooling notes:
 
-- ty and ruff target Python 3.10, which they take from `requires-python`.
-- `typing.Self` is 3.11+, so self-returning methods use a bound `TypeVar`
-  (ruff's `PYI019` is ignored in `ruff.toml`).
+- ty and ruff target Python 3.13, which they take from `requires-python`.
 - The `__init__.py` files use `# isort: skip_file`. Their import order resolves
   the circular imports between package modules, so don't sort them.
 - State numbering and token order in output depend on set iteration, which
@@ -72,11 +70,12 @@ All code lives in `src/syntactes/`:
 ## Rules
 
 - **No runtime dependencies** (`dependencies = []`). Use the stdlib only, and
-  that includes `typing_extensions`. Adding a runtime dependency needs explicit
+  so no `typing_extensions` either. Adding a runtime dependency needs explicit
   approval. Dev-only tools go in the `dev` dependency group
   (`uv add --dev …`).
-- **Python 3.10+** (`requires-python = ">=3.10"`, CI tests 3.10 to 3.13).
-  Don't use syntax or stdlib features newer than 3.10.
+- **Python 3.13+** (`requires-python = ">=3.13"`). Modern syntax is fine, and
+  ruff enforces it. Use PEP 695 generics (`class Generator[ItemT: LR0Item]`),
+  `type` aliases, and `typing.Self`.
 - **The public API** is everything exported from `syntactes/__init__.py`,
   `syntactes/parser/__init__.py` and `syntactes/parsing_table/__init__.py`, plus
   the behaviour the README shows. Point out any breaking change and get
