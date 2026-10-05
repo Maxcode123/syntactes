@@ -1,12 +1,18 @@
 from collections.abc import Iterable
-from typing import Protocol
+from typing import Protocol, TypeVar
 
-from syntactes._item import Item, LR0Item, LR1Item
+from syntactes._item import LR0Item, LR1Item
+
+_StateT = TypeVar("_StateT", bound="LR0State")
 
 
 class State(Protocol):
     number: int | None
-    items: set[Item]
+    is_final: bool
+
+    def set_number(self, number: int) -> None: ...
+
+    def set_final(self) -> None: ...
 
 
 class LR0State:
@@ -15,16 +21,16 @@ class LR0State:
     """
 
     def __init__(self) -> None:
-        self.number = None
-        self.items = set()
+        self.number: int | None = None
+        self.items: set[LR0Item] = set()
         self.is_final = False
 
-    @staticmethod
-    def from_items(items: Iterable[LR0Item]) -> "LR0State":
+    @classmethod
+    def from_items(cls: type[_StateT], items: Iterable[LR0Item]) -> _StateT:
         """
-        Create an LR0 state from a set of LR0 items.
+        Create a state from a set of items.
         """
-        state = LR0State()
+        state = cls()
         {state.add_item(item) for item in items}
 
         return state
@@ -62,26 +68,7 @@ class LR1State(LR0State):
     State of LR1 parser. An LR1 state is a set of LR1 items.
     """
 
-    def __init__(self) -> None:
-        self.number = None
-        self.items = set()
-        self.is_final = False
-
-    @staticmethod
-    def from_items(items: Iterable[LR1Item]) -> "LR1State":
-        """
-        Create an LR1 state from a set of LR1 items.
-        """
-        state = LR1State()
-        {state.add_item(item) for item in items}
-
-        return state
-
-    def add_item(self, item: LR1Item) -> None:
-        """
-        Adds an item to the state.
-        """
-        self.items.add(item)
+    items: set[LR1Item]
 
     def __repr__(self) -> str:
         return f"<LR1State: {self.number}>"

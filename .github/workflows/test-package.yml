@@ -28,5 +28,7 @@ jobs:
       run: make lint
     - name: Check formatting
       run: uv run ruff format --check src examples
+    - name: Type check
+      run: make type-check
     - name: Test package
       run: make test

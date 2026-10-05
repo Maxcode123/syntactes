@@ -4,7 +4,7 @@ from typing import ClassVar, TypeAlias
 
 from syntactes import Rule
 
-Executable: TypeAlias = Callable[[...], None]
+Executable: TypeAlias = Callable[..., None]
 
 
 def execute_on(rule: Rule):

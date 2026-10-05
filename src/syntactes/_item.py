@@ -52,7 +52,7 @@ class LR0Item:
         return f"<LR0Item: {self}>"
 
     def __str__(self) -> str:
-        rhs = [s for s in self.rule.rhs]
+        rhs: list[Token | str] = list(self.rule.rhs)
         rhs.insert(self.position, ".")
         return f"{self.rule.lhs} -> " + " ".join(map(str, rhs))
 
@@ -81,7 +81,7 @@ class LR1Item(LR0Item):
         return f"<LR1Item: {self}>"
 
     def __str__(self) -> str:
-        rhs = [s for s in self.rule.rhs]
+        rhs: list[Token | str] = list(self.rule.rhs)
         rhs.insert(self.position, ".")
         return (
             f"{self.rule.lhs} -> "

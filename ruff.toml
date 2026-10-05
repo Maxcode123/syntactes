@@ -1,4 +1,9 @@
 line-length = 88
 
+[lint]
+# `typing.Self` needs Python 3.11, and `typing_extensions` would be a runtime
+# dependency, so self-returning methods use a bound TypeVar instead.
+ignore = ["PYI019"]
+
 [lint.isort]
 combine-as-imports = true

@@ -1,8 +1,16 @@
 from abc import ABC
 from collections import deque
 from collections.abc import Iterable
+from typing import NoReturn, cast
 
-from syntactes import Grammar, LR0Generator, LR1Generator, SLRGenerator, Token
+from syntactes import (
+    Grammar,
+    LR0Generator,
+    LR1Generator,
+    Rule,
+    SLRGenerator,
+    Token,
+)
 from syntactes._action import Action, ActionType
 from syntactes._state import LR0State
 from syntactes.parser import (
@@ -61,9 +69,9 @@ class Parser(ABC):
     def _apply_action(self, token: Token, action: Action) -> None:
         if action.action_type == ActionType.SHIFT:
             self._token_stack.append(token)
-            self._set_state(action.actionable)
+            self._set_state(cast(LR0State, action.actionable))
         elif action.action_type == ActionType.REDUCE:
-            rule = action.actionable
+            rule = cast(Rule, action.actionable)
             args = [self._token_stack.pop() for _ in reversed(rule.rhs)]
             self._token_stack.append(rule.lhs)
 
@@ -75,13 +83,13 @@ class Parser(ABC):
             self._token_stream.appendleft(token)  # reduce actions do not consume tokenA
 
             shift = self._get_action(rule.lhs)
-            self._set_state(shift.actionable)
+            self._set_state(cast(LR0State, shift.actionable))
 
     def _get_action(self, token: Token) -> Action:
         actions = self._table.get_actions(self._get_state(), token)
         if actions is None:
-            actions = self._table.get(self._get_state())
-            expected_tokens = [] if actions is None else list(actions.keys())
+            row = self._table.get(self._get_state())
+            expected_tokens = [] if row is None else list(row.keys())
             self._raise(UnexpectedTokenError(token, expected_tokens))
 
         action = self._resolve_conflict(actions)
@@ -101,7 +109,7 @@ class Parser(ABC):
         self._state_stack.clear()
         self._token_stream.clear()
 
-    def _raise(self, error: ParserError) -> None:
+    def _raise(self, error: ParserError) -> NoReturn:
         self._cleanup()
         raise error from None
 
