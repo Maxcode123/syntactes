@@ -337,7 +337,7 @@ def lr1_state_12():
 
 
 def lr1_parsing_table():
-    table = LR1ParsingTable(grammar_1)
+    table = LR1ParsingTable(grammar_2)
     table.add_entry(Entry(lr1_state_1(), L, Action.shift(lr1_state_2())))
     table.add_entry(Entry(lr1_state_1(), C, Action.shift(lr1_state_3())))
     table.add_entry(Entry(lr1_state_1(), LPAREN, Action.shift(lr1_state_4())))
@@ -350,7 +350,7 @@ def lr1_parsing_table():
     table.add_entry(Entry(lr1_state_4(), LPAREN, Action.shift(lr1_state_7())))
     table.add_entry(Entry(lr1_state_4(), RPAREN, Action.shift(lr1_state_8())))
     table.add_entry(Entry(lr1_state_5(), LPAREN, Action.reduce(rule_2_2)))
-    table.add_entry(Entry(lr1_state_5(), RPAREN, Action.reduce(rule_2_2)))
+    table.add_entry(Entry(lr1_state_5(), EOF, Action.reduce(rule_2_2)))
     table.add_entry(Entry(lr1_state_6(), RPAREN, Action.shift(lr1_state_9())))
     table.add_entry(Entry(lr1_state_7(), LPAREN, Action.shift(lr1_state_7())))
     table.add_entry(Entry(lr1_state_7(), RPAREN, Action.shift(lr1_state_11())))

@@ -201,6 +201,10 @@ class TestLR1ParserParse(TestLR1Parser):
     def test_invalid_syntax_raises(self):
         self.assert_parser_error()
 
+    @args(LPAREN, RPAREN, LPAREN, RPAREN, EOF)
+    def test_list_of_two(self):
+        self.result()
+
 
 class TestSLRParserWithoutUnitRules(TestCase):
     def subject(self, *stream):
