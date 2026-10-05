@@ -17,11 +17,14 @@ from syntactes.tests.data import (
     LPAREN,
     PLUS,
     RPAREN,
+    E,
+    grammar_1,
     grammar_3,
     grammar_6,
     lr0_parsing_table,
     lr0_state_1,
     lr1_parsing_table,
+    rule_1_1,
     rule_2_1,
     rule_2_6,
     rule_3_1,
@@ -311,3 +314,60 @@ class TestSLRParserReduceArguments(TestSLRParser):
     @args(x, PLUS, x, EOF)
     def test_rhs_order(self):
         self.assertResult([("T", "+", "E")])
+
+
+class TestSLRParserValues(TestSLRParser):
+    def subject(self, *stream):
+        return self.parser().parse(stream)
+
+    def tearDown(self):
+        ExecutablesRegistry.clear()
+
+    def register_evaluator(self):
+        execute_on(rule_1_1)(lambda e: e.value)
+        execute_on(rule_2_1)(lambda t, _plus, e: t.value + e.value)
+        execute_on(rule_3_1)(lambda t: t.value)
+        execute_on(rule_4_1)(lambda x: x.value)
+
+    @args(x1, PLUS, x2, EOF)
+    def test_evaluates_x1_plus_x2(self):
+        self.register_evaluator()
+        self.assertResult(3)
+
+    @args(x2, PLUS, x2, PLUS, x1, EOF)
+    def test_evaluates_x2_plus_x2_plus_x1(self):
+        self.register_evaluator()
+        self.assertResult(5)
+
+    @args(x1, EOF)
+    def test_without_callbacks_returns_none(self):
+        self.assertResultIs(None)
+
+    @args(x1, EOF)
+    def test_rule_without_callback_has_none_value(self):
+        execute_on(rule_1_1)(lambda e: ("E", e.value))
+        self.assertResult(("E", None))
+
+    @args(x1, PLUS, x2, EOF)
+    def test_starting_rule_receives_no_eof(self):
+        execute_on(rule_1_1)(lambda *args: tuple(map(str, args)))
+        self.assertResult(("E",))
+
+    @args(x1, EOF)
+    def test_callback_exception_propagates(self):
+        execute_on(rule_4_1)(lambda x: 1 / 0)
+        self.assertResultRaises(ZeroDivisionError)
+
+    @args(x1, EOF)
+    def test_grammar_tokens_are_not_mutated(self):
+        self.register_evaluator()
+        self.result()
+        self.assertIsNone(E.value)
+
+
+class TestParsingTableGrammar(TestCase):
+    def subject(self):
+        return slr_parsing_table().grammar
+
+    def test_grammar(self):
+        self.assertResultIs(grammar_1)

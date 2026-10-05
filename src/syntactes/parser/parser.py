@@ -36,9 +36,18 @@ class Parser(ABC):
         parser = cls(parsing_table)
         return parser
 
-    def parse(self, stream: Iterable[Token]) -> None:
+    def parse(self, stream: Iterable[Token]) -> object:
         """
         Parses the given stream of tokens. Expects the EOF token as the last one.
+
+        On each reduction the callback registered for the rule is called with one
+        token per right-hand side symbol, in order. Its return value becomes the
+        `value` of the token pushed for the left-hand side. A rule without a
+        callback pushes a token whose value is None.
+
+        On accept the starting rule's callback is called with its right-hand side
+        tokens except the trailing EOF, and its return value is returned. Without
+        a callback for the starting rule, returns None.
 
         Raises `syntactes.parser.UnexpectedTokenError` if an unexpected token is
         received.
@@ -65,10 +74,9 @@ class Parser(ABC):
                 args = self._pop(tokens, rule.rhs_len)
                 self._pop(states, rule.rhs_len)
 
-                executable = ExecutablesRegistry.get(rule)
-                executable(*args)
+                value = ExecutablesRegistry.get(rule)(*args)
 
-                tokens.append(rule.lhs)
+                tokens.append(Token(rule.lhs.symbol, False, value))
                 shift = self._get_action(states[-1], rule.lhs)
                 states.append(cast(LR0State, shift.actionable))
             elif action.action_type == ActionType.ACCEPT:
@@ -76,7 +84,9 @@ class Parser(ABC):
                 if extra is not None:
                     raise UnexpectedTokenError(extra, [])
 
-                return
+                starting_rule = self._table.grammar.starting_rule
+                args = self._pop(tokens, starting_rule.rhs_len - 1)
+                return ExecutablesRegistry.get(starting_rule)(*args)
 
         raise NotAcceptedError("Expected EOF token. ")
 

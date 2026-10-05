@@ -4,7 +4,7 @@ from typing import ClassVar
 
 from syntactes import Rule
 
-type Executable = Callable[..., None]
+type Executable = Callable[..., object]
 
 
 def execute_on(rule: Rule):
@@ -16,7 +16,7 @@ def execute_on(rule: Rule):
         ExecutablesRegistry.register(rule, executable_fn)
 
         @functools.wraps(executable_fn)
-        def wrapped_executable_fn(*args, **kwargs) -> None:
+        def wrapped_executable_fn(*args, **kwargs) -> object:
             return executable_fn(*args, **kwargs)
 
         return wrapped_executable_fn

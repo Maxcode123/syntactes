@@ -13,6 +13,9 @@ class ParsingTable(Protocol):
     rows: dict[LR0State, Row]
 
     @property
+    def grammar(self) -> Grammar: ...
+
+    @property
     def initial_state(self) -> LR0State: ...
 
     @classmethod
@@ -47,6 +50,13 @@ class LR0ParsingTable:
         table = cls(grammar)
         {table.add_entry(entry) for entry in entries}
         return table
+
+    @property
+    def grammar(self) -> Grammar:
+        """
+        The grammar the table was created for.
+        """
+        return self._grammar
 
     @property
     def initial_state(self) -> LR0State:
