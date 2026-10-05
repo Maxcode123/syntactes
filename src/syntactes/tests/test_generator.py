@@ -702,3 +702,16 @@ class TestGeneratorNullable(TestCase):
     @args(grammar_4)
     def test_nullable_symbol(self):
         self.assertResult({A})
+
+
+class TestLR0GeneratorClosureWithoutUnitRules(TestCase):
+    def subject(self, items):
+        return LR0Generator(grammar_3).closure(items)
+
+    # S -> . E $
+    @args({LR0Item(grammar_3.starting_rule, 0)})
+    def test_with_starting_item(self):
+        self.assertSetEqual(
+            set(map(str, self.result())),
+            {"S -> . E $", "E -> . T + x", "T -> . x"},
+        )

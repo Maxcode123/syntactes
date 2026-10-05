@@ -14,6 +14,7 @@ from syntactes.tests.data import (
     LPAREN,
     PLUS,
     RPAREN,
+    grammar_3,
     lr0_parsing_table,
     lr1_parsing_table,
     rule_2_1,
@@ -176,3 +177,16 @@ class TestLR1ParserParse(TestLR1Parser):
     @args(LPAREN, RPAREN, RPAREN, EOF)
     def test_invalid_syntax_raises(self):
         self.assert_parser_error()
+
+
+class TestSLRParserWithoutUnitRules(TestCase):
+    def subject(self, *stream):
+        return SLRParser.from_grammar(grammar_3).parse(stream)
+
+    @args(x, PLUS, x, EOF)
+    def test_x_plus_x(self):
+        self.result()
+
+    @args(x, EOF)
+    def test_x_raises(self):
+        self.assertResultRaises(ParserError)

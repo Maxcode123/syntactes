@@ -266,19 +266,19 @@ class LR0Generator(Generator[LR0Item, LR0State]):
         for any item S -> . E in the given items, closure adds E -> . T
         and T -> . x, where E -> T and T -> x are production rules.
         """
-        _set = {item for item in items}
-        __set = set()
+        _set = set(items)
+        worklist = list(items)
 
-        while __set != _set:
-            __set = {i for i in _set}
+        while worklist:
+            item = worklist.pop()
+            after_dot = item.after_dot
+            if after_dot is None or after_dot.is_terminal:
+                continue
 
-            for item in items:
-                after_dot = item.after_dot
-                if after_dot is None:
-                    continue
-
-                new_items = self._get_related_items(after_dot)
-                _set |= new_items
+            for new_item in self._get_related_items(after_dot):
+                if new_item not in _set:
+                    _set.add(new_item)
+                    worklist.append(new_item)
 
         return _set
 
@@ -302,22 +302,15 @@ class LR0Generator(Generator[LR0Item, LR0State]):
 
     def _get_related_items(self, symbol: Token) -> set[LR0Item]:
         """
-        e.g. the items X -> .g, Y -> .p would be returned for the below grammar rules:
+        Returns the initial items of the rules for the given symbol.
+
+        e.g. the items X -> . g and X -> . Y would be returned for symbol X and
+        the below grammar rules:
         1. X -> g
         2. X -> Y
         3. Y -> p
-        where 'g' and 'p' are terminals.
         """
-        _set: set[LR0Item] = set()
-
-        for rule in self.grammar.rules:
-            if rule.lhs == symbol:
-                _set.add(LR0Item(rule, 0))
-
-                if rule.rhs_len == 1 and not rule.rhs[0].is_terminal:
-                    _set |= self._get_related_items(rule.rhs[0])
-
-        return _set
+        return {LR0Item(rule, 0) for rule in self._rules if rule.lhs == symbol}
 
     def _create_initial_items(self) -> set[LR0Item]:
         return self.closure({LR0Item(self.grammar.starting_rule, 0)})
