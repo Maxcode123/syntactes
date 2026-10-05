@@ -23,6 +23,7 @@ class Generator[ItemT: LR0Item, StateT: LR0State](ABC):
     def __init__(self, grammar: Grammar) -> None:
         self.grammar = grammar
         self._rules = tuple(grammar.rules)
+        self._rule_indices = {rule: i for i, rule in enumerate(self._rules)}
         self._nullable = self._compute_nullable()
         self._first_sets = self._compute_first_sets()
         self._follow_sets = self._compute_follow_sets()
@@ -42,7 +43,9 @@ class Generator[ItemT: LR0Item, StateT: LR0State](ABC):
         states, shift_entries = self._create_states_and_shift_entries()
         reduce_entries = self._create_reduce_entries(states)
 
-        entries = shift_entries | reduce_entries
+        # Duplicates are dropped and the order is kept, so that the actions in
+        # each cell of the table come in the same order on every run.
+        entries = list(dict.fromkeys(shift_entries + reduce_entries))
 
         table = self.table_cls.from_entries(entries, self.grammar)
 
@@ -53,7 +56,7 @@ class Generator[ItemT: LR0Item, StateT: LR0State](ABC):
         Returns the set of automaton states for the configured grammar.
         """
         states, _ = self._create_states_and_shift_entries()
-        return states
+        return set(states)
 
     def _first(self, *symbols: Token) -> set[Token]:
         """
@@ -173,48 +176,30 @@ class Generator[ItemT: LR0Item, StateT: LR0State](ABC):
 
         return follow_sets
 
-    def _create_states_and_shift_entries(self) -> tuple[set[StateT], set[Entry]]:
+    def _create_states_and_shift_entries(self) -> tuple[list[StateT], list[Entry]]:
         """
-        Computes and returns the states and entries for shift actions.
-        """
-        states, entries = {}, set()
+        Computes and returns the states, in the order of their numbers, and the
+        entries for shift actions.
 
-        initial_items = self._create_initial_items()
-        initial_state = self.state_cls.from_items(initial_items)
+        States are discovered breadth-first and numbered in discovery order. Items
+        and symbols are visited in a fixed order, so the numbering doesn't depend
+        on set iteration order.
+        """
+        initial_state = self.state_cls.from_items(self._create_initial_items())
         initial_state.set_number(1)
-        states[initial_state] = 1
 
-        _states, _entries = {}, set()
-        while (_states, _entries) != (states, entries):
-            _states = {s: n for s, n in states.items()}
-            _entries = {e for e in entries}
-            states, entries = self._extend_states_and_shift_entries(_states, _entries)
-
-        return set(states.keys()), entries
-
-    def _extend_states_and_shift_entries(
-        self, states: dict[StateT, int], entries: set[Entry]
-    ) -> tuple[dict[StateT, int], set[Entry]]:
-        """
-        Extends states and entries following the below algorithm:
-
-        ```
-        for each state S in states
-            for each item A -> a.Xb in S
-                J = goto(S, X)
-                states.add(J)
-                entries.add((S->J, X))
-        ```
-        """
-        _states = {s: n for s, n in states.items()}
-        _entries = {e for e in entries}
+        known: dict[StateT, StateT] = {initial_state: initial_state}
+        states = [initial_state]
+        entries: list[Entry] = []
 
         EOF = Token.eof()
         for state in states:
             # A state's items are of the generator's item type, e.g. LR1State
             # holds LR1Items, but the shared state base class can't express that.
             items = cast(set[ItemT], state.items)
-            for item in items:
+
+            symbols: list[Token] = []
+            for item in self._sorted_items(items):
                 after_dot = item.after_dot
                 if after_dot is None:
                     continue
@@ -223,26 +208,41 @@ class Generator[ItemT: LR0Item, StateT: LR0State](ABC):
                     state.set_final()
                     continue
 
-                new_items = self.goto(items, after_dot)
+                if after_dot not in symbols:
+                    symbols.append(after_dot)
 
+            for symbol in symbols:
+                new_items = self.goto(items, symbol)
                 if len(new_items) == 0:
                     continue
 
                 new = self.state_cls.from_items(new_items)
+                target = known.get(new)
+                if target is None:
+                    new.set_number(len(states) + 1)
+                    known[new] = new
+                    states.append(new)
+                    target = new
 
-                number = _states.setdefault(new, len(_states) + 1)
-                new.set_number(number)
+                entries.append(Entry(state, symbol, Action.shift(target)))
 
-                _entries.add(Entry(state, after_dot, Action.shift(new)))
+        return states, entries
 
-        return _states, _entries
+    def _sorted_items(self, items: set[ItemT]) -> list[ItemT]:
+        return sorted(items, key=self._item_key)
+
+    def _item_key(self, item: ItemT) -> tuple[int, int, str]:
+        """
+        Returns the key that orders items by rule, then dot position.
+        """
+        return (self._rule_indices[item.rule], item.position, "")
 
     @abstractmethod
     def _create_initial_items(self) -> set[ItemT]:
         raise NotImplementedError()
 
     @abstractmethod
-    def _create_reduce_entries(self, states: set[StateT]) -> set[Entry]:
+    def _create_reduce_entries(self, states: list[StateT]) -> list[Entry]:
         raise NotImplementedError()
 
 
@@ -315,23 +315,23 @@ class LR0Generator(Generator[LR0Item, LR0State]):
     def _create_initial_items(self) -> set[LR0Item]:
         return self.closure({LR0Item(self.grammar.starting_rule, 0)})
 
-    def _create_reduce_entries(self, states: set[LR0State]) -> set[Entry]:
+    def _create_reduce_entries(self, states: list[LR0State]) -> list[Entry]:
         """
         Computes and returns the entries for reduce actions and the accept action.
         """
-        entries: set[Entry] = set()
+        entries: list[Entry] = []
+        terminals = sorted(t for t in self.grammar.tokens if t.is_terminal)
 
         for state in states:
-            for item in state.items:
+            for item in self._sorted_items(state.items):
                 if item.after_dot == Token.eof():
-                    entries.add(Entry(state, Token.eof(), Action.accept()))
+                    entries.append(Entry(state, Token.eof(), Action.accept()))
 
                 if not item.dot_is_last():
                     continue
 
-                for token in self.grammar.tokens:
-                    if token.is_terminal:
-                        entries.add(Entry(state, token, Action.reduce(item.rule)))
+                for token in terminals:
+                    entries.append(Entry(state, token, Action.reduce(item.rule)))
 
         return entries
 
@@ -339,22 +339,22 @@ class LR0Generator(Generator[LR0Item, LR0State]):
 class SLRGenerator(LR0Generator):
     table_cls = SLRParsingTable
 
-    def _create_reduce_entries(self, states: set[LR0State]) -> set[Entry]:
+    def _create_reduce_entries(self, states: list[LR0State]) -> list[Entry]:
         """
         Computes and returns the entries for reduce actions and the accept action.
         """
-        entries: set[Entry] = set()
+        entries: list[Entry] = []
 
         for state in states:
-            for item in state.items:
+            for item in self._sorted_items(state.items):
                 if item.after_dot == Token.eof():
-                    entries.add(Entry(state, Token.eof(), Action.accept()))
+                    entries.append(Entry(state, Token.eof(), Action.accept()))
 
                 if not item.dot_is_last():
                     continue
 
-                for token in self._follow(item.rule.lhs):
-                    entries.add(Entry(state, token, Action.reduce(item.rule)))
+                for token in sorted(self._follow(item.rule.lhs)):
+                    entries.append(Entry(state, token, Action.reduce(item.rule)))
 
         return entries
 
@@ -427,25 +427,36 @@ class LR1Generator(Generator[LR1Item, LR1State]):
             for lookahead in lookaheads
         }
 
-    def _create_reduce_entries(self, states: set[LR1State]) -> set[Entry]:
+    def _create_reduce_entries(self, states: list[LR1State]) -> list[Entry]:
         """
         Computes and returns the entries for reduce actions and the accept action.
         """
-        entries: set[Entry] = set()
+        entries: list[Entry] = []
 
         for state in states:
-            for item in state.items:
+            for item in self._sorted_items(state.items):
                 if item.after_dot == Token.eof():
-                    entries.add(Entry(state, Token.eof(), Action.accept()))
+                    entries.append(Entry(state, Token.eof(), Action.accept()))
 
                 if not item.dot_is_last():
                     continue
 
-                entries.add(
+                entries.append(
                     Entry(state, item.lookahead_token, Action.reduce(item.rule))
                 )
 
         return entries
+
+    def _item_key(self, item: LR1Item) -> tuple[int, int, str]:
+        """
+        Returns the key that orders items by rule, then dot position, then
+        lookahead.
+        """
+        return (
+            self._rule_indices[item.rule],
+            item.position,
+            item.lookahead_token.symbol,
+        )
 
     def _create_initial_items(self) -> set[LR1Item]:
         return self.closure({LR1Item(self.grammar.starting_rule, 0, Token.eof())})

@@ -96,7 +96,21 @@ class Parser(ABC):
         return action
 
     def _resolve_conflict(self, actions: list[Action]) -> Action:
-        return actions[0]
+        """
+        Picks one of the actions of a table cell. Accept wins over shift, shift
+        wins over reduce, and among reduces the lowest rule number wins.
+        """
+        return min(actions, key=self._action_priority)
+
+    @staticmethod
+    def _action_priority(action: Action) -> tuple[int, int]:
+        if action.action_type == ActionType.ACCEPT:
+            return (0, 0)
+
+        if action.action_type == ActionType.SHIFT:
+            return (1, 0)
+
+        return (2, cast(Rule, action.actionable).number)
 
     def _set_state(self, state: LR0State) -> None:
         self._state_stack.append(state)

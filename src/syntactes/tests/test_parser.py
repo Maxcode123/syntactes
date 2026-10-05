@@ -1,6 +1,7 @@
 from unittest_extensions import TestCase, args
 
 from syntactes import Token
+from syntactes._action import Action
 from syntactes.parser import (
     ExecutablesRegistry,
     LR0Parser,
@@ -15,9 +16,14 @@ from syntactes.tests.data import (
     PLUS,
     RPAREN,
     grammar_3,
+    grammar_6,
     lr0_parsing_table,
+    lr0_state_1,
     lr1_parsing_table,
     rule_2_1,
+    rule_2_6,
+    rule_3_1,
+    rule_3_6,
     rule_4_1,
     slr_parsing_table,
     x,
@@ -203,3 +209,36 @@ class TestLR1ParserWithoutUnitRules(TestCase):
     @args(x, EOF)
     def test_x_raises(self):
         self.assertResultRaises(ParserError)
+
+
+class TestParserResolveConflict(TestCase):
+    def subject(self, *actions):
+        return LR0Parser(lr0_parsing_table())._resolve_conflict(list(actions))
+
+    @args(Action.reduce(rule_3_1), Action.shift(lr0_state_1()))
+    def test_shift_over_reduce(self):
+        self.assertResult(Action.shift(lr0_state_1()))
+
+    @args(Action.reduce(rule_3_1), Action.reduce(rule_2_1))
+    def test_lowest_rule_number(self):
+        self.assertResult(Action.reduce(rule_2_1))
+
+    @args(Action.shift(lr0_state_1()), Action.accept())
+    def test_accept_over_shift(self):
+        self.assertResult(Action.accept())
+
+
+class TestSLRParserAmbiguousGrammar(TestCase):
+    def subject(self, *stream):
+        reductions = []
+        execute_on(rule_2_6)(lambda *_: reductions.append("r"))
+        execute_on(rule_3_6)(lambda *_: reductions.append("x"))
+        SLRParser.from_grammar(grammar_6).parse(stream)
+        return " ".join(reductions)
+
+    def tearDown(self):
+        ExecutablesRegistry.clear()
+
+    @args(x, PLUS, x, PLUS, x, EOF)
+    def test_right_associative(self):
+        self.assertResult("x x x r r")
