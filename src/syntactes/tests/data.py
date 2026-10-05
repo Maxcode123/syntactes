@@ -280,7 +280,7 @@ def lr1_parsing_table():
     table.add_entry(Entry(lr1_state_8(), EOF, Action.reduce(rule_5_2)))
     table.add_entry(Entry(lr1_state_9(), LPAREN, Action.reduce(rule_4_2)))
     table.add_entry(Entry(lr1_state_9(), EOF, Action.reduce(rule_4_2)))
-    table.add_entry(Entry(lr1_state_10(), RPAREN, Action.shift(lr1_state_12)))
+    table.add_entry(Entry(lr1_state_10(), RPAREN, Action.shift(lr1_state_12())))
     table.add_entry(Entry(lr1_state_11(), RPAREN, Action.reduce(rule_5_2)))
     table.add_entry(Entry(lr1_state_12(), RPAREN, Action.reduce(rule_4_2)))
     return table
