@@ -114,6 +114,22 @@ rules_6 = (rule_1_6, rule_2_6, rule_3_6)
 
 grammar_6 = Grammar(rule_1_6, rules_6, tokens_6)
 
+tokens_7 = {EOF, S, T, A, a, x, y, NULL}
+
+# Nullable symbol followed by more symbols.
+# 0. S -> T A x $
+# 1. T -> y
+# 2. A -> a
+# 3. A -> ε
+rule_1_7 = Rule(0, S, T, A, x, EOF)
+rule_2_7 = Rule(1, T, y)
+rule_3_7 = Rule(2, A, a)
+rule_4_7 = Rule(3, A, NULL)
+
+rules_7 = (rule_1_7, rule_2_7, rule_3_7, rule_4_7)
+
+grammar_7 = Grammar(rule_1_7, rules_7, tokens_7)
+
 
 def lr0_state_1():
     item_1 = LR0Item(grammar_1.starting_rule, 0)  # S -> . E $

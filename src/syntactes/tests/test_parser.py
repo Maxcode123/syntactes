@@ -190,3 +190,16 @@ class TestSLRParserWithoutUnitRules(TestCase):
     @args(x, EOF)
     def test_x_raises(self):
         self.assertResultRaises(ParserError)
+
+
+class TestLR1ParserWithoutUnitRules(TestCase):
+    def subject(self, *stream):
+        return LR1Parser.from_grammar(grammar_3).parse(stream)
+
+    @args(x, PLUS, x, EOF)
+    def test_x_plus_x(self):
+        self.result()
+
+    @args(x, EOF)
+    def test_x_raises(self):
+        self.assertResultRaises(ParserError)

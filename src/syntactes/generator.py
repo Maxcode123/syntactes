@@ -370,27 +370,26 @@ class LR1Generator(Generator[LR1Item, LR1State]):
 
         The closure operation adds more items to a set of items when there
         is a dot to the left of a non-terminal symbol.
+
+        e.g. for an item A -> α . B β, a it adds B -> . γ, b for every rule
+        B -> γ and every terminal b in FIRST(β a).
         """
-        _set = {item for item in items}
-        __set = set()
+        _set = set(items)
+        worklist = list(items)
 
-        while __set != _set:
-            __set = {i for i in _set}
+        while worklist:
+            item = worklist.pop()
+            after_dot = item.after_dot
+            if after_dot is None or after_dot.is_terminal:
+                continue
 
-            for item in __set:
-                after_dot = item.after_dot
-                if after_dot is None:
-                    continue
-
-                if item.position + 1 < item.rule.rhs_len:
-                    next_symbol = item.rule.rhs[item.position + 1]
-                else:
-                    next_symbol = None
-
-                new_items = self._get_related_items(
-                    after_dot, next_symbol, item.lookahead_token
-                )
-                _set |= new_items
+            rest = item.rule.rhs[item.position + 1 :]
+            for new_item in self._get_related_items(
+                after_dot, rest, item.lookahead_token
+            ):
+                if new_item not in _set:
+                    _set.add(new_item)
+                    worklist.append(new_item)
 
         return _set
 
@@ -413,26 +412,20 @@ class LR1Generator(Generator[LR1Item, LR1State]):
         return self.closure(_set)
 
     def _get_related_items(
-        self, symbol: Token, next_symbol: Token | None, lookahead_token: Token
+        self, symbol: Token, rest: tuple[Token, ...], lookahead_token: Token
     ) -> set[LR1Item]:
-        _set: set[LR1Item] = set()
+        """
+        Returns the initial items of the rules for the given symbol, with every
+        lookahead in FIRST(rest lookahead_token).
+        """
+        lookaheads = self._first(*rest, lookahead_token)
 
-        if next_symbol is None:
-            lookaheads = (lookahead_token,)
-        else:
-            lookaheads = (next_symbol, lookahead_token)
-
-        for rule in self.grammar.rules:
-            if rule.lhs != symbol:
-                continue
-
-            for s in self._first(*lookaheads):
-                _set.add(LR1Item(rule, 0, s))
-
-                if rule.rhs_len == 1 and not rule.rhs[0].is_terminal:
-                    _set |= self._get_related_items(rule.rhs[0], None, s)
-
-        return _set
+        return {
+            LR1Item(rule, 0, lookahead)
+            for rule in self._rules
+            if rule.lhs == symbol
+            for lookahead in lookaheads
+        }
 
     def _create_reduce_entries(self, states: set[LR1State]) -> set[Entry]:
         """
