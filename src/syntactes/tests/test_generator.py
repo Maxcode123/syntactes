@@ -6,6 +6,7 @@ from syntactes.generator import LR0Generator, LR1Generator, SLRGenerator
 from syntactes.tests.data import (
     EOF,
     LPAREN,
+    NULL,
     PLUS,
     RPAREN,
     A,
@@ -22,6 +23,7 @@ from syntactes.tests.data import (
     grammar_4,
     grammar_5,
     grammar_7,
+    grammar_8,
     lr0_state_1,
     lr0_state_2,
     lr0_state_3,
@@ -739,3 +741,37 @@ class TestLR1GeneratorClosureWithNullableSymbols(TestCase):
     @args(grammar_7, {LR1Item(grammar_7.starting_rule, 0, EOF)})
     def test_nullable_symbol_followed_by_more_symbols(self):
         self.assert_items({"S -> . T A x $, $", "T -> . y, a", "T -> . y, x"})
+
+
+class TestGeneratorWithEmptyRules(TestCase):
+    def subject(self, generator_cls, grammar):
+        return generator_cls(grammar).generate()
+
+    def assert_no_null_actions(self):
+        for row in self.result().rows.values():
+            self.assertNotIn(NULL, row)
+
+    def assert_no_null_column(self):
+        lines = self.result().pretty_str().splitlines()
+        header = next(line for line in lines if line.startswith("|     |"))
+        self.assertNotIn("ε", header)
+
+    @args(LR0Generator, grammar_4)
+    def test_lr0_no_null_actions(self):
+        self.assert_no_null_actions()
+
+    @args(SLRGenerator, grammar_4)
+    def test_slr_no_null_actions(self):
+        self.assert_no_null_actions()
+
+    @args(LR1Generator, grammar_4)
+    def test_lr1_no_null_actions(self):
+        self.assert_no_null_actions()
+
+    @args(SLRGenerator, grammar_4)
+    def test_no_null_column(self):
+        self.assert_no_null_column()
+
+    @args(SLRGenerator, grammar_8)
+    def test_without_null_token_no_null_column(self):
+        self.assert_no_null_column()

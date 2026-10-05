@@ -122,7 +122,8 @@ class LR0ParsingTable:
 
     def _table_pretty_str(self) -> str:
         rows = []
-        tokens = sorted(self._grammar.tokens)
+        # ε is never an input token, so its column would always be empty.
+        tokens = sorted(t for t in self._grammar.tokens if t != Token.null())
         for number, row in sorted((tpl[0].number, tpl[1]) for tpl in self.rows.items()):
             r = [str(number)]
             for token in sorted(tokens):

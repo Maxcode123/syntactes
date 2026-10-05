@@ -59,3 +59,7 @@ class TestGenerateIsDeterministic(TestCase):
     @args("LR1Generator", "grammar_6")
     def test_lr1_grammar_6(self):
         self.assert_same_output()
+
+    @args("LR1Generator", "grammar_4")
+    def test_lr1_grammar_4(self):
+        self.assert_same_output()

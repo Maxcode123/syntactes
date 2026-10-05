@@ -130,6 +130,17 @@ rules_7 = (rule_1_7, rule_2_7, rule_3_7, rule_4_7)
 
 grammar_7 = Grammar(rule_1_7, rules_7, tokens_7)
 
+# Same as grammar_4, with the empty rule written without ε.
+# 0. S -> A E $
+# 1. A -> a
+# 2. A ->
+# 3. E -> x
+rule_3_8 = Rule(2, A)
+
+rules_8 = (rule_1_4, rule_2_4, rule_3_8, rule_4_4)
+
+grammar_8 = Grammar(rule_1_4, rules_8, tokens_4)
+
 
 def lr0_state_1():
     item_1 = LR0Item(grammar_1.starting_rule, 0)  # S -> . E $

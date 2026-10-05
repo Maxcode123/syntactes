@@ -96,8 +96,9 @@ class Parser(ABC):
             elif action.action_type == ActionType.REDUCE:
                 # Reduce actions do not consume the token.
                 rule = cast(Rule, action.actionable)
-                args = self._pop(tokens, rule.rhs_len)
-                self._pop(states, rule.rhs_len)
+                rhs_len = 0 if rule.is_empty() else rule.rhs_len
+                args = self._pop(tokens, rhs_len)
+                self._pop(states, rhs_len)
 
                 value = self._executable(rule)(*args)
 

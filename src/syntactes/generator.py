@@ -320,7 +320,10 @@ class LR0Generator(Generator[LR0Item, LR0State]):
         Computes and returns the entries for reduce actions and the accept action.
         """
         entries: list[Entry] = []
-        terminals = sorted(t for t in self.grammar.tokens if t.is_terminal)
+        null = Token.null()
+        terminals = sorted(
+            t for t in self.grammar.tokens if t.is_terminal and t != null
+        )
 
         for state in states:
             for item in self._sorted_items(state.items):

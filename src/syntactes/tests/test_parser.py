@@ -13,12 +13,16 @@ from syntactes.parser import (
 from syntactes.tests.data import (
     EOF,
     LPAREN,
+    NULL,
     PLUS,
     RPAREN,
     E,
+    a,
     grammar_1,
     grammar_3,
+    grammar_4,
     grammar_6,
+    grammar_8,
     lr0_parsing_table,
     lr0_state_1,
     lr1_parsing_table,
@@ -27,7 +31,9 @@ from syntactes.tests.data import (
     rule_2_1,
     rule_2_6,
     rule_3_1,
+    rule_3_4,
     rule_3_6,
+    rule_3_8,
     rule_4_1,
     slr_parsing_table,
     x,
@@ -396,3 +402,57 @@ class TestParserExecutablesAreNotGlobal(TestCase):
 
     def test_other_parser_unaffected(self):
         self.assertResultIs(None)
+
+
+class TestParserWithEmptyRules(TestCase):
+    def subject(self, parser_cls, grammar, *stream):
+        return parser_cls.from_grammar(grammar).parse(stream)
+
+    @args(SLRParser, grammar_4, x, EOF)
+    def test_slr_without_optional(self):
+        self.result()
+
+    @args(SLRParser, grammar_4, a, x, EOF)
+    def test_slr_with_optional(self):
+        self.result()
+
+    @args(LR1Parser, grammar_4, x, EOF)
+    def test_lr1_without_optional(self):
+        self.result()
+
+    @args(LR1Parser, grammar_4, a, x, EOF)
+    def test_lr1_with_optional(self):
+        self.result()
+
+    @args(SLRParser, grammar_8, x, EOF)
+    def test_slr_without_null_token(self):
+        self.result()
+
+    @args(LR1Parser, grammar_8, a, x, EOF)
+    def test_lr1_without_null_token(self):
+        self.result()
+
+    @args(SLRParser, grammar_4, a, EOF)
+    def test_slr_missing_symbol_raises(self):
+        self.assertResultRaises(ParserError)
+
+    @args(LR1Parser, grammar_4, NULL, x, EOF)
+    def test_null_token_in_stream_raises(self):
+        self.assertResultRaises(ParserError)
+
+
+class TestParserEmptyRuleCallback(TestCase):
+    def subject(self, grammar, rule):
+        received = []
+        parser = SLRParser.from_grammar(grammar)
+        parser.execute_on(rule)(lambda *args: received.append(args))
+        parser.parse([x, EOF])
+        return received
+
+    @args(grammar_4, rule_3_4)
+    def test_with_null_token(self):
+        self.assertResult([()])
+
+    @args(grammar_8, rule_3_8)
+    def test_without_null_token(self):
+        self.assertResult([()])
