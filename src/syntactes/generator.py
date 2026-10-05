@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from typing import cast
 
-from syntactes import Grammar, Token
+from syntactes import Grammar, Rule, Token
 from syntactes._action import Action
 from syntactes._item import LR0Item, LR1Item
 from syntactes._state import LR0State, LR1State
@@ -21,6 +22,10 @@ class Generator[ItemT: LR0Item, StateT: LR0State](ABC):
 
     def __init__(self, grammar: Grammar) -> None:
         self.grammar = grammar
+        self._rules = tuple(grammar.rules)
+        self._nullable = self._compute_nullable()
+        self._first_sets = self._compute_first_sets()
+        self._follow_sets = self._compute_follow_sets()
 
     @abstractmethod
     def closure(self, items: set[ItemT]) -> set[ItemT]:
@@ -52,78 +57,121 @@ class Generator[ItemT: LR0Item, StateT: LR0State](ABC):
 
     def _first(self, *symbols: Token) -> set[Token]:
         """
-        Computes and returns the FIRST set for the given symbols.
+        Returns the FIRST set of the given sequence of symbols.
 
-        The FIRST set of a symbol 'G' is the set of terminal symbols that are
-        first in the right-hand side of a rule where 'G' is the left-hand side.
+        The FIRST set of a sequence is the set of terminals that can begin a
+        string derived from it. ε never appears in it; whether the whole sequence
+        can derive the empty string is a question for the nullable set.
 
-        e.g. 't', 'k' and 'a' would be the FIRST set of G for the below rules:
+        e.g. for the rules below, FIRST(G) is {t, k, a}:
         1. G -> t
-        2. G -> kM
+        2. G -> k M
         3. G -> T
         4. T -> a
-        where M is either terminal or non-terminal and T is non-terminal.
-        'a' would be included in the FIRST set because if rule 4 is substituted in
-        rule 3, 'a' (which is a terminal) could be derived from 'G'.
-
-        The computation of the FIRST set looks very simple if symbols = X Y Z, it seems
-        as if Y and Z can be ignored and FIRST(X) is the only thing that matters.
-        But consider a grammar where X -> Y and Y -> ε. Because Y can produce the empty
-        string - and therefore X can produce the empty string - we find that FIRST(XYZ)
-        must include FIRST(Z). Therefore, in computing FIRST sets we must keep track of
-        which symbols can produce the empty string.
+        If X can derive the empty string, FIRST(X Y) also includes FIRST(Y).
         """
-        if len(symbols) == 0:
-            return set()
-
-        symbol = symbols[0]
-
-        if symbol.is_terminal:
-            return {symbol}
-
-        _set: set[Token] = set()
-
-        for rule in self.grammar.rules:
-            if rule.lhs != symbol:
-                continue
-
-            if rule.has_null_rhs() and len(symbols) > 1:
-                _set |= self._first(*symbols[1:])
-                continue
-
-            if rule.rhs[0].is_terminal:
-                _set.add(rule.rhs[0])
-            elif rule.rhs_len == 1:
-                _set |= self._first(*rule.rhs)
-
-        return _set
+        return self._first_of(symbols, self._first_sets)
 
     def _follow(self, symbol: Token) -> set[Token]:
         """
-        Computes and returns the FOLLOW set for the given symbol.
+        Returns the FOLLOW set of the given symbol.
 
-        The FOLLOW set of a symbol 'G' is the set of terminals that can immediately
-        follow 'G' in a rule.
+        The FOLLOW set of a non-terminal is the set of terminals that can appear
+        immediately after it in some derivation. Terminals have an empty FOLLOW
+        set.
         """
-        if symbol.is_terminal:
-            return set()
+        return set(self._follow_sets.get(symbol, set()))
 
-        _set: set[Token] = set()
+    @staticmethod
+    def _rhs(rule: Rule) -> tuple[Token, ...]:
+        """
+        Returns the right-hand side of the rule without ε symbols.
+        """
+        null = Token.null()
+        return tuple(s for s in rule.rhs if s != null)
 
-        for rule in self.grammar.rules:
-            for i, s in enumerate(rule.rhs):
-                if s != symbol:
+    def _first_of(
+        self, symbols: Iterable[Token], first_sets: dict[Token, set[Token]]
+    ) -> set[Token]:
+        result: set[Token] = set()
+        null = Token.null()
+
+        for symbol in symbols:
+            if symbol == null:
+                continue
+
+            if symbol.is_terminal:
+                result.add(symbol)
+                return result
+
+            result |= first_sets.get(symbol, set())
+            if symbol not in self._nullable:
+                return result
+
+        return result
+
+    def _compute_nullable(self) -> set[Token]:
+        """
+        Computes the set of non-terminals that can derive the empty string.
+        """
+        nullable: set[Token] = set()
+
+        changed = True
+        while changed:
+            changed = False
+            for rule in self._rules:
+                if rule.lhs in nullable:
                     continue
 
-                if i == rule.rhs_len - 1:
-                    if rule.lhs == symbol:
+                if all(s in nullable for s in self._rhs(rule)):
+                    nullable.add(rule.lhs)
+                    changed = True
+
+        return nullable
+
+    def _compute_first_sets(self) -> dict[Token, set[Token]]:
+        """
+        Computes the FIRST set of every non-terminal, as a fixpoint over all rules.
+        """
+        first_sets: dict[Token, set[Token]] = {rule.lhs: set() for rule in self._rules}
+
+        changed = True
+        while changed:
+            changed = False
+            for rule in self._rules:
+                new = self._first_of(self._rhs(rule), first_sets)
+                if not new <= first_sets[rule.lhs]:
+                    first_sets[rule.lhs] |= new
+                    changed = True
+
+        return first_sets
+
+    def _compute_follow_sets(self) -> dict[Token, set[Token]]:
+        """
+        Computes the FOLLOW set of every non-terminal, as a fixpoint over all rules.
+        """
+        follow_sets: dict[Token, set[Token]] = {rule.lhs: set() for rule in self._rules}
+
+        changed = True
+        while changed:
+            changed = False
+            for rule in self._rules:
+                rhs = self._rhs(rule)
+                for i, symbol in enumerate(rhs):
+                    if symbol.is_terminal:
                         continue
 
-                    _set |= self._follow(rule.lhs)
-                else:
-                    _set |= self._first(rule.rhs[i + 1])
+                    rest = rhs[i + 1 :]
+                    new = self._first(*rest)
+                    if all(s in self._nullable for s in rest):
+                        new |= follow_sets[rule.lhs]
 
-        return _set
+                    follow = follow_sets.setdefault(symbol, set())
+                    if not new <= follow:
+                        follow |= new
+                        changed = True
+
+        return follow_sets
 
     def _create_states_and_shift_entries(self) -> tuple[set[StateT], set[Entry]]:
         """

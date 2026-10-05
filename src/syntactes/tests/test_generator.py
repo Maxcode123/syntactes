@@ -8,12 +8,19 @@ from syntactes.tests.data import (
     LPAREN,
     PLUS,
     RPAREN,
+    A,
+    B,
     C,
     E,
     L,
+    S,
     T,
+    a,
     grammar_1,
     grammar_2,
+    grammar_3,
+    grammar_4,
+    grammar_5,
     lr0_state_1,
     lr0_state_2,
     lr0_state_3,
@@ -40,6 +47,7 @@ from syntactes.tests.data import (
     rule_4_2,
     rule_5_2,
     x,
+    y,
 )
 
 
@@ -603,3 +611,94 @@ class TestLR1GeneratorGoto(TestLR1Generator):
                 "C -> . ( ), )",
             }
         )
+
+
+class TestGeneratorFirst(TestCase):
+    def subject(self, grammar, *symbols):
+        return LR0Generator(grammar)._first(*symbols)
+
+    @args(grammar_1, E)
+    def test_unit_rule(self):
+        self.assertResult({x})
+
+    @args(grammar_3, E)
+    def test_leading_non_terminal(self):
+        self.assertResult({x})
+
+    @args(grammar_2, L)
+    def test_left_recursion(self):
+        self.assertResult({LPAREN})
+
+    @args(grammar_4, A)
+    def test_nullable_symbol(self):
+        self.assertResult({a})
+
+    @args(grammar_4, A, E)
+    def test_nullable_prefix(self):
+        self.assertResult({a, x})
+
+    @args(grammar_4, S)
+    def test_through_nullable_symbol(self):
+        self.assertResult({a, x})
+
+    @args(grammar_4, A, A)
+    def test_all_nullable(self):
+        self.assertResult({a})
+
+    @args(grammar_5, B)
+    def test_mutual_recursion(self):
+        self.assertResult({y})
+
+    @args(grammar_1, PLUS, E)
+    def test_terminal(self):
+        self.assertResult({PLUS})
+
+    @args(grammar_1)
+    def test_empty_sequence(self):
+        self.assertResult(set())
+
+
+class TestGeneratorFollow(TestCase):
+    def subject(self, grammar, symbol):
+        return LR0Generator(grammar)._follow(symbol)
+
+    @args(grammar_1, T)
+    def test_unit_rule(self):
+        self.assertResult({PLUS, EOF})
+
+    @args(grammar_1, E)
+    def test_right_recursion(self):
+        self.assertResult({EOF})
+
+    @args(grammar_3, T)
+    def test_leading_non_terminal(self):
+        self.assertResult({PLUS})
+
+    @args(grammar_2, C)
+    def test_nested(self):
+        self.assertResult({EOF, LPAREN, RPAREN})
+
+    @args(grammar_4, A)
+    def test_nullable_symbol(self):
+        self.assertResult({x})
+
+    @args(grammar_5, A)
+    def test_mutual_tail_recursion_a(self):
+        self.assertResult({EOF})
+
+    @args(grammar_5, B)
+    def test_mutual_tail_recursion_b(self):
+        self.assertResult({EOF})
+
+
+class TestGeneratorNullable(TestCase):
+    def subject(self, grammar):
+        return LR0Generator(grammar)._nullable
+
+    @args(grammar_1)
+    def test_no_nullable_symbols(self):
+        self.assertResult(set())
+
+    @args(grammar_4)
+    def test_nullable_symbol(self):
+        self.assertResult({A})
