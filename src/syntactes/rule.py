@@ -9,11 +9,11 @@ class Rule:
     LHS -> RHS1 RHS2...
     """
 
-    def __init__(self, number: int, lhs: Token, *args: Token) -> None:
+    def __init__(self, number: int, lhs: Token, *rhs: Token) -> None:
         self.number = number
         self.lhs = lhs
-        self.rhs = args
-        self.rhs_len = len(args)
+        self.rhs = rhs
+        self.rhs_len = len(rhs)
 
     def is_empty(self) -> bool:
         """

@@ -48,7 +48,8 @@ class LR0ParsingTable:
         Create a parsing table from the given entries.
         """
         table = cls(grammar)
-        {table.add_entry(entry) for entry in entries}
+        for entry in entries:
+            table.add_entry(entry)
         return table
 
     @property
