@@ -24,6 +24,9 @@ class Generator[ItemT: LR0Item, StateT: LR0State](ABC):
         self.grammar = grammar
         self._rules = tuple(grammar.rules)
         self._rule_indices = {rule: i for i, rule in enumerate(self._rules)}
+        self._rules_by_lhs: dict[Token, list[Rule]] = {}
+        for rule in self._rules:
+            self._rules_by_lhs.setdefault(rule.lhs, []).append(rule)
         self._nullable = self._compute_nullable()
         self._first_sets = self._compute_first_sets()
         self._follow_sets = self._compute_follow_sets()
@@ -189,6 +192,9 @@ class Generator[ItemT: LR0Item, StateT: LR0State](ABC):
         initial_state.set_number(1)
 
         known: dict[StateT, StateT] = {initial_state: initial_state}
+        # The kernel of a goto (its items before closure) determines the state,
+        # so a kernel seen before needs no closure.
+        by_kernel: dict[frozenset[ItemT], StateT] = {}
         states = [initial_state]
         entries: list[Entry] = []
 
@@ -198,7 +204,7 @@ class Generator[ItemT: LR0Item, StateT: LR0State](ABC):
             # holds LR1Items, but the shared state base class can't express that.
             items = cast(set[ItemT], state.items)
 
-            symbols: list[Token] = []
+            kernels: dict[Token, list[ItemT]] = {}
             for item in self._sorted_items(items):
                 after_dot = item.after_dot
                 if after_dot is None:
@@ -208,21 +214,21 @@ class Generator[ItemT: LR0Item, StateT: LR0State](ABC):
                     state.set_final()
                     continue
 
-                if after_dot not in symbols:
-                    symbols.append(after_dot)
+                kernels.setdefault(after_dot, []).append(self._advance(item))
 
-            for symbol in symbols:
-                new_items = self.goto(items, symbol)
-                if len(new_items) == 0:
-                    continue
-
-                new = self.state_cls.from_items(new_items)
-                target = known.get(new)
+            for symbol, kernel_items in kernels.items():
+                kernel = frozenset(kernel_items)
+                target = by_kernel.get(kernel)
                 if target is None:
-                    new.set_number(len(states) + 1)
-                    known[new] = new
-                    states.append(new)
-                    target = new
+                    new = self.state_cls.from_items(self.closure(set(kernel)))
+                    target = known.get(new)
+                    if target is None:
+                        new.set_number(len(states) + 1)
+                        known[new] = new
+                        states.append(new)
+                        target = new
+
+                    by_kernel[kernel] = target
 
                 entries.append(Entry(state, symbol, Action.shift(target)))
 
@@ -236,6 +242,13 @@ class Generator[ItemT: LR0Item, StateT: LR0State](ABC):
         Returns the key that orders items by rule, then dot position.
         """
         return (self._rule_indices[item.rule], item.position, "")
+
+    @abstractmethod
+    def _advance(self, item: ItemT) -> ItemT:
+        """
+        Returns the item with the dot moved one symbol to the right.
+        """
+        raise NotImplementedError()
 
     @abstractmethod
     def _create_initial_items(self) -> set[ItemT]:
@@ -289,16 +302,11 @@ class LR0Generator(Generator[LR0Item, LR0State]):
         The goto operation creates a set where all items have the dot past the
         given symbol.
         """
-        _set: set[LR0Item] = set()
-
-        for item in items:
-            if item.dot_is_last() or item.after_dot != token:
-                continue
-
-            next_item = LR0Item(item.rule, item.position + 1)
-            _set.add(next_item)
-
+        _set = {self._advance(item) for item in items if item.after_dot == token}
         return self.closure(_set)
+
+    def _advance(self, item: LR0Item) -> LR0Item:
+        return LR0Item(item.rule, item.position + 1)
 
     def _get_related_items(self, symbol: Token) -> set[LR0Item]:
         """
@@ -310,7 +318,7 @@ class LR0Generator(Generator[LR0Item, LR0State]):
         2. X -> Y
         3. Y -> p
         """
-        return {LR0Item(rule, 0) for rule in self._rules if rule.lhs == symbol}
+        return {LR0Item(rule, 0) for rule in self._rules_by_lhs.get(symbol, [])}
 
     def _create_initial_items(self) -> set[LR0Item]:
         return self.closure({LR0Item(self.grammar.starting_rule, 0)})
@@ -367,6 +375,12 @@ class LR1Generator(Generator[LR1Item, LR1State]):
     state_cls = LR1State
     item_cls = LR1Item
 
+    def __init__(self, grammar: Grammar) -> None:
+        super().__init__(grammar)
+        self._related_items_cache: dict[
+            tuple[Token, tuple[Token, ...], Token], set[LR1Item]
+        ] = {}
+
     def closure(self, items: set[LR1Item]) -> set[LR1Item]:
         """
         Computes and returns the closure for the given set of items.
@@ -403,16 +417,11 @@ class LR1Generator(Generator[LR1Item, LR1State]):
         The goto operation creates a set where all items have the dot past the
         given symbol.
         """
-        _set: set[LR1Item] = set()
-
-        for item in items:
-            if item.dot_is_last() or item.after_dot != token:
-                continue
-
-            next_item = LR1Item(item.rule, item.position + 1, item.lookahead_token)
-            _set.add(next_item)
-
+        _set = {self._advance(item) for item in items if item.after_dot == token}
         return self.closure(_set)
+
+    def _advance(self, item: LR1Item) -> LR1Item:
+        return LR1Item(item.rule, item.position + 1, item.lookahead_token)
 
     def _get_related_items(
         self, symbol: Token, rest: tuple[Token, ...], lookahead_token: Token
@@ -421,14 +430,18 @@ class LR1Generator(Generator[LR1Item, LR1State]):
         Returns the initial items of the rules for the given symbol, with every
         lookahead in FIRST(rest lookahead_token).
         """
-        lookaheads = self._first(*rest, lookahead_token)
+        key = (symbol, rest, lookahead_token)
+        related = self._related_items_cache.get(key)
+        if related is None:
+            lookaheads = self._first(*rest, lookahead_token)
+            related = {
+                LR1Item(rule, 0, lookahead)
+                for rule in self._rules_by_lhs.get(symbol, [])
+                for lookahead in lookaheads
+            }
+            self._related_items_cache[key] = related
 
-        return {
-            LR1Item(rule, 0, lookahead)
-            for rule in self._rules
-            if rule.lhs == symbol
-            for lookahead in lookaheads
-        }
+        return related
 
     def _create_reduce_entries(self, states: list[LR1State]) -> list[Entry]:
         """
