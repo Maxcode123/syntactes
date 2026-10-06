@@ -29,9 +29,12 @@ class Token:
         return self.symbol
 
     def __hash__(self) -> int:
-        return hash(str(self))
+        return hash(self.symbol)
 
     def __eq__(self, other) -> bool:
+        if self is other:
+            return True
+
         if not isinstance(other, Token):
             return False
 

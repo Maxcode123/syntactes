@@ -22,6 +22,7 @@ class LR0State:
         self.number: int | None = None
         self.items: set[LR0Item] = set()
         self.is_final = False
+        self._hash: int | None = None
 
     @classmethod
     def from_items(cls, items: Iterable[LR0Item]) -> Self:
@@ -39,6 +40,7 @@ class LR0State:
         Adds an item to the state.
         """
         self.items.add(item)
+        self._hash = None
 
     def set_number(self, number: int) -> None:
         self.number = number
@@ -53,7 +55,12 @@ class LR0State:
         return f"{self.number}:" + "(" + ", ".join(map(str, self.items)) + ")"
 
     def __hash__(self) -> int:
-        return hash(frozenset(self.items))
+        # States with hundreds of items are hashed often while generating tables,
+        # so the hash is kept until an item is added.
+        if self._hash is None:
+            self._hash = hash(frozenset(self.items))
+
+        return self._hash
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, self.__class__):
