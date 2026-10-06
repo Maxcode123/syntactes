@@ -13,6 +13,9 @@ class ParsingTable(Protocol):
     rows: dict[LR0State, Row]
 
     @property
+    def grammar(self) -> Grammar: ...
+
+    @property
     def initial_state(self) -> LR0State: ...
 
     @classmethod
@@ -45,8 +48,16 @@ class LR0ParsingTable:
         Create a parsing table from the given entries.
         """
         table = cls(grammar)
-        {table.add_entry(entry) for entry in entries}
+        for entry in entries:
+            table.add_entry(entry)
         return table
+
+    @property
+    def grammar(self) -> Grammar:
+        """
+        The grammar the table was created for.
+        """
+        return self._grammar
 
     @property
     def initial_state(self) -> LR0State:
@@ -103,41 +114,37 @@ class LR0ParsingTable:
         return conflicts
 
     def _rules_pretty_str(self) -> str:
-        rules = [str(i) + ". " + str(r) for i, r in enumerate(self._grammar.rules)]
-        rules_str = "\n".join(rules)
-        rules_str = "GRAMMAR RULES\n" + "-" * max(map(len, rules)) + "\n" + rules_str
-        rules_str += "\n" + "-" * max(map(len, rules))
+        rules = [f"{rule.number}. {rule}" for rule in self._grammar.rules]
+        line = "-" * max(map(len, rules))
 
-        return rules_str
+        return "\n".join(["GRAMMAR RULES", line, *rules, line])
 
     def _table_pretty_str(self) -> str:
-        rows = []
-        tokens = sorted(self._grammar.tokens)
-        for number, row in sorted((tpl[0].number, tpl[1]) for tpl in self.rows.items()):
-            r = [str(number)]
-            for token in sorted(tokens):
+        # ε is never an input token, so its column would always be empty.
+        tokens = sorted(t for t in self._grammar.tokens if t != Token.null())
+
+        header = ["", *map(str, tokens)]
+        rows = [header]
+        for state, row in sorted(self.rows.items(), key=lambda r: r[0].number or 0):
+            cells = [str(state.number)]
+            for token in tokens:
                 actions = row.get(token, [])
-                if len(actions) >= 1:
-                    actions_str = ",".join(map(str, actions))
-                else:
-                    actions_str = "--"
+                cells.append(",".join(map(str, actions)) if actions else "--")
 
-                r.append(actions_str)
+            rows.append(cells)
 
-            rows.append(r)
+        widths = [max(len(row[i]) for row in rows) for i in range(len(header))]
+        lines = [
+            "|" + "|".join(f"  {cell:<{w}}  " for cell, w in zip(row, widths)) + "|"
+            for row in rows
+        ]
+        separator = "-" * len(lines[0])
 
-        table = "|     |  "
-        table += "   |  ".join(str(token) for token in tokens) + "  |\n"
+        table = [self._header_str(), separator]
+        for line in lines:
+            table += [line, separator]
 
-        header = self._header_str() + "\n" + "-" * len(table) + "\n"
-        table += "-" * len(table) + "\n"
-
-        for row in rows:
-            new_row = "|  " + "  |  ".join(row) + " |" + "\n"
-            table += new_row
-            table += "-" * len(new_row) + "\n"
-
-        return header + table
+        return "\n".join(table) + "\n"
 
     def _header_str(self) -> str:
         return "LR0 PARSING TABLE"

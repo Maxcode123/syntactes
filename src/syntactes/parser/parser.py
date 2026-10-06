@@ -1,7 +1,6 @@
 from abc import ABC
-from collections import deque
-from collections.abc import Iterable
-from typing import NoReturn, cast
+from collections.abc import Callable, Iterable
+from typing import cast
 
 from syntactes import (
     Grammar,
@@ -14,12 +13,16 @@ from syntactes import (
 from syntactes._action import Action, ActionType
 from syntactes._state import LR0State
 from syntactes.parser import (
-    ExecutablesRegistry,
     NotAcceptedError,
-    ParserError,
     UnexpectedTokenError,
 )
 from syntactes.parsing_table import ParsingTable
+
+type Executable = Callable[..., object]
+
+
+def _do_nothing(*_: Token) -> None:
+    return None
 
 
 class Parser(ABC):
@@ -27,9 +30,7 @@ class Parser(ABC):
 
     def __init__(self, table: ParsingTable) -> None:
         self._table = table
-        self._token_stack: deque[Token] = deque()
-        self._state_stack: deque[LR0State] = deque()
-        self._token_stream: deque[Token] = deque()
+        self._executables: dict[Rule, Executable] = {}
 
     @classmethod
     def from_grammar(cls, grammar: Grammar) -> "Parser":
@@ -41,77 +42,122 @@ class Parser(ABC):
         parser = cls(parsing_table)
         return parser
 
-    def parse(self, stream: Iterable[Token]) -> None:
+    def execute_on[F: Executable](self, rule: Rule) -> Callable[[F], F]:
+        """
+        Decorate a function to be executed when this parser reduces by `rule`.
+
+        The function is called with one token per right-hand side symbol of the
+        rule, and returns the value of the left-hand side token. The decorated
+        function is returned unchanged.
+
+        Raises `ValueError` if `rule` is not a rule of the parser's grammar.
+        """
+        if rule not in self._table.grammar.rules:
+            raise ValueError(f"Rule '{rule}' is not in the parser's grammar.")
+
+        def executable_decorator(executable_fn: F) -> F:
+            self._executables[rule] = executable_fn
+            return executable_fn
+
+        return executable_decorator
+
+    def parse(self, stream: Iterable[Token]) -> object:
         """
         Parses the given stream of tokens. Expects the EOF token as the last one.
+
+        On each reduction the callback registered for the rule is called with one
+        token per right-hand side symbol, in order. Its return value becomes the
+        `value` of the token pushed for the left-hand side. A rule without a
+        callback pushes a token whose value is None.
+
+        On accept the starting rule's callback is called with its right-hand side
+        tokens except the trailing EOF, and its return value is returned. Without
+        a callback for the starting rule, returns None.
 
         Raises `syntactes.parser.UnexpectedTokenError` if an unexpected token is
         received.
 
-        Raises `syntactes.parser.NotAcceptedError` if the stream of token has been
-        parsed and the parser did not receive an accept action.
+        Raises `syntactes.parser.NotAcceptedError` if the stream of tokens ends
+        before the parser receives an accept action.
         """
-        self._set_state(self._table.initial_state)
-        self._token_stream.extend(stream)
+        states: list[LR0State] = [self._table.initial_state]
+        tokens: list[Token] = []
 
-        while len(self._token_stream) > 0:
-            token = self._token_stream.popleft()
-            self._apply_action(token, self._get_action(token))
+        tokens_in = iter(stream)
+        token = next(tokens_in, None)
 
-        if token != Token.eof():
-            self._raise(NotAcceptedError("Expected EOF token. "))
+        while token is not None:
+            action = self._get_action(states[-1], token)
 
-        if not self._get_state().is_final:
-            actions = self._table.get(self._get_state())
-            expected_tokens = [] if actions is None else list(actions.keys())
-            self._raise(UnexpectedTokenError(Token.eof(), expected_tokens))
+            if action.action_type == ActionType.SHIFT:
+                tokens.append(token)
+                states.append(cast(LR0State, action.actionable))
+                token = next(tokens_in, None)
+            elif action.action_type == ActionType.REDUCE:
+                # Reduce actions do not consume the token.
+                rule = cast(Rule, action.actionable)
+                rhs_len = 0 if rule.is_empty() else rule.rhs_len
+                args = self._pop(tokens, rhs_len)
+                self._pop(states, rhs_len)
 
-    def _apply_action(self, token: Token, action: Action) -> None:
-        if action.action_type == ActionType.SHIFT:
-            self._token_stack.append(token)
-            self._set_state(cast(LR0State, action.actionable))
-        elif action.action_type == ActionType.REDUCE:
-            rule = cast(Rule, action.actionable)
-            args = [self._token_stack.pop() for _ in reversed(rule.rhs)]
-            self._token_stack.append(rule.lhs)
+                value = self._executable(rule)(*args)
 
-            {self._state_stack.pop() for _ in rule.rhs}
+                tokens.append(Token(rule.lhs.symbol, False, value))
+                shift = self._get_action(states[-1], rule.lhs)
+                states.append(cast(LR0State, shift.actionable))
+            elif action.action_type == ActionType.ACCEPT:
+                extra = next(tokens_in, None)
+                if extra is not None:
+                    raise UnexpectedTokenError(extra, [])
 
-            executable = ExecutablesRegistry.get(rule)
-            executable(*args)
+                starting_rule = self._table.grammar.starting_rule
+                args = self._pop(tokens, starting_rule.rhs_len - 1)
+                return self._executable(starting_rule)(*args)
 
-            self._token_stream.appendleft(token)  # reduce actions do not consume tokenA
+        raise NotAcceptedError("Expected EOF token. ")
 
-            shift = self._get_action(rule.lhs)
-            self._set_state(cast(LR0State, shift.actionable))
+    def _executable(self, rule: Rule) -> Executable:
+        return self._executables.get(rule, _do_nothing)
 
-    def _get_action(self, token: Token) -> Action:
-        actions = self._table.get_actions(self._get_state(), token)
+    @staticmethod
+    def _pop[T](stack: list[T], count: int) -> list[T]:
+        """
+        Pops the top `count` elements of the stack and returns them in stack order.
+        """
+        popped = stack[len(stack) - count :]
+        del stack[len(stack) - count :]
+        return popped
+
+    def _get_action(self, state: LR0State, token: Token) -> Action:
+        actions = self._table.get_actions(state, token)
         if actions is None:
-            row = self._table.get(self._get_state())
-            expected_tokens = [] if row is None else list(row.keys())
-            self._raise(UnexpectedTokenError(token, expected_tokens))
+            raise UnexpectedTokenError(token, self._expected_tokens(state))
 
-        action = self._resolve_conflict(actions)
-        return action
+        return self._resolve_conflict(actions)
+
+    def _expected_tokens(self, state: LR0State) -> list[Token]:
+        """
+        Returns the terminals that have an action in the given state, sorted.
+        """
+        row = self._table.get(state) or {}
+        return sorted(token for token in row if token.is_terminal)
 
     def _resolve_conflict(self, actions: list[Action]) -> Action:
-        return actions[0]
+        """
+        Picks one of the actions of a table cell. Accept wins over shift, shift
+        wins over reduce, and among reduces the lowest rule number wins.
+        """
+        return min(actions, key=self._action_priority)
 
-    def _set_state(self, state: LR0State) -> None:
-        self._state_stack.append(state)
+    @staticmethod
+    def _action_priority(action: Action) -> tuple[int, int]:
+        if action.action_type == ActionType.ACCEPT:
+            return (0, 0)
 
-    def _get_state(self) -> LR0State:
-        return self._state_stack[-1]
+        if action.action_type == ActionType.SHIFT:
+            return (1, 0)
 
-    def _cleanup(self) -> None:
-        self._token_stack.clear()
-        self._state_stack.clear()
-        self._token_stream.clear()
-
-    def _raise(self, error: ParserError) -> NoReturn:
-        self._cleanup()
-        raise error from None
+        return (2, cast(Rule, action.actionable).number)
 
 
 class LR0Parser(Parser):

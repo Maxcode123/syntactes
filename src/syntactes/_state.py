@@ -29,7 +29,8 @@ class LR0State:
         Create a state from a set of items.
         """
         state = cls()
-        {state.add_item(item) for item in items}
+        for item in items:
+            state.add_item(item)
 
         return state
 

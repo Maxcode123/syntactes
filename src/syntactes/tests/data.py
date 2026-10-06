@@ -51,6 +51,96 @@ rules_2 = (rule_1_2, rule_2_2, rule_3_2, rule_4_2, rule_5_2)
 
 grammar_2 = Grammar(rule_1_2, rules_2, tokens_2)
 
+A = Token("A", False)
+B = Token("B", False)
+a = Token("a", True)
+y = Token("y", True)
+NULL = Token.null()
+
+tokens_3 = {EOF, S, E, T, x, PLUS}
+tokens_4 = {EOF, S, A, E, a, x, NULL}
+tokens_5 = {EOF, S, A, B, x, y}
+tokens_6 = {EOF, S, E, x, PLUS}
+
+# Closure without a chain of unit rules.
+# 0. S -> E $
+# 1. E -> T + x
+# 2. T -> x
+rule_1_3 = Rule(0, S, E, EOF)
+rule_2_3 = Rule(1, E, T, PLUS, x)
+rule_3_3 = Rule(2, T, x)
+
+rules_3 = (rule_1_3, rule_2_3, rule_3_3)
+
+grammar_3 = Grammar(rule_1_3, rules_3, tokens_3)
+
+# Nullable symbol.
+# 0. S -> A E $
+# 1. A -> a
+# 2. A -> ε
+# 3. E -> x
+rule_1_4 = Rule(0, S, A, E, EOF)
+rule_2_4 = Rule(1, A, a)
+rule_3_4 = Rule(2, A, NULL)
+rule_4_4 = Rule(3, E, x)
+
+rules_4 = (rule_1_4, rule_2_4, rule_3_4, rule_4_4)
+
+grammar_4 = Grammar(rule_1_4, rules_4, tokens_4)
+
+# Mutual tail recursion.
+# 0. S -> A $
+# 1. A -> x B
+# 2. B -> y A
+# 3. B -> y
+rule_1_5 = Rule(0, S, A, EOF)
+rule_2_5 = Rule(1, A, x, B)
+rule_3_5 = Rule(2, B, y, A)
+rule_4_5 = Rule(3, B, y)
+
+rules_5 = (rule_1_5, rule_2_5, rule_3_5, rule_4_5)
+
+grammar_5 = Grammar(rule_1_5, rules_5, tokens_5)
+
+# Ambiguous, with a shift/reduce conflict.
+# 0. S -> E $
+# 1. E -> E + E
+# 2. E -> x
+rule_1_6 = Rule(0, S, E, EOF)
+rule_2_6 = Rule(1, E, E, PLUS, E)
+rule_3_6 = Rule(2, E, x)
+
+rules_6 = (rule_1_6, rule_2_6, rule_3_6)
+
+grammar_6 = Grammar(rule_1_6, rules_6, tokens_6)
+
+tokens_7 = {EOF, S, T, A, a, x, y, NULL}
+
+# Nullable symbol followed by more symbols.
+# 0. S -> T A x $
+# 1. T -> y
+# 2. A -> a
+# 3. A -> ε
+rule_1_7 = Rule(0, S, T, A, x, EOF)
+rule_2_7 = Rule(1, T, y)
+rule_3_7 = Rule(2, A, a)
+rule_4_7 = Rule(3, A, NULL)
+
+rules_7 = (rule_1_7, rule_2_7, rule_3_7, rule_4_7)
+
+grammar_7 = Grammar(rule_1_7, rules_7, tokens_7)
+
+# Same as grammar_4, with the empty rule written without ε.
+# 0. S -> A E $
+# 1. A -> a
+# 2. A ->
+# 3. E -> x
+rule_3_8 = Rule(2, A)
+
+rules_8 = (rule_1_4, rule_2_4, rule_3_8, rule_4_4)
+
+grammar_8 = Grammar(rule_1_4, rules_8, tokens_4)
+
 
 def lr0_state_1():
     item_1 = LR0Item(grammar_1.starting_rule, 0)  # S -> . E $
@@ -258,7 +348,7 @@ def lr1_state_12():
 
 
 def lr1_parsing_table():
-    table = LR1ParsingTable(grammar_1)
+    table = LR1ParsingTable(grammar_2)
     table.add_entry(Entry(lr1_state_1(), L, Action.shift(lr1_state_2())))
     table.add_entry(Entry(lr1_state_1(), C, Action.shift(lr1_state_3())))
     table.add_entry(Entry(lr1_state_1(), LPAREN, Action.shift(lr1_state_4())))
@@ -271,7 +361,7 @@ def lr1_parsing_table():
     table.add_entry(Entry(lr1_state_4(), LPAREN, Action.shift(lr1_state_7())))
     table.add_entry(Entry(lr1_state_4(), RPAREN, Action.shift(lr1_state_8())))
     table.add_entry(Entry(lr1_state_5(), LPAREN, Action.reduce(rule_2_2)))
-    table.add_entry(Entry(lr1_state_5(), RPAREN, Action.reduce(rule_2_2)))
+    table.add_entry(Entry(lr1_state_5(), EOF, Action.reduce(rule_2_2)))
     table.add_entry(Entry(lr1_state_6(), RPAREN, Action.shift(lr1_state_9())))
     table.add_entry(Entry(lr1_state_7(), LPAREN, Action.shift(lr1_state_7())))
     table.add_entry(Entry(lr1_state_7(), RPAREN, Action.shift(lr1_state_11())))

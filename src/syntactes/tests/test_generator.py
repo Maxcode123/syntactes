@@ -6,14 +6,24 @@ from syntactes.generator import LR0Generator, LR1Generator, SLRGenerator
 from syntactes.tests.data import (
     EOF,
     LPAREN,
+    NULL,
     PLUS,
     RPAREN,
+    A,
+    B,
     C,
     E,
     L,
+    S,
     T,
+    a,
     grammar_1,
     grammar_2,
+    grammar_3,
+    grammar_4,
+    grammar_5,
+    grammar_7,
+    grammar_8,
     lr0_state_1,
     lr0_state_2,
     lr0_state_3,
@@ -40,6 +50,7 @@ from syntactes.tests.data import (
     rule_4_2,
     rule_5_2,
     x,
+    y,
 )
 
 
@@ -603,3 +614,164 @@ class TestLR1GeneratorGoto(TestLR1Generator):
                 "C -> . ( ), )",
             }
         )
+
+
+class TestGeneratorFirst(TestCase):
+    def subject(self, grammar, *symbols):
+        return LR0Generator(grammar)._first(*symbols)
+
+    @args(grammar_1, E)
+    def test_unit_rule(self):
+        self.assertResult({x})
+
+    @args(grammar_3, E)
+    def test_leading_non_terminal(self):
+        self.assertResult({x})
+
+    @args(grammar_2, L)
+    def test_left_recursion(self):
+        self.assertResult({LPAREN})
+
+    @args(grammar_4, A)
+    def test_nullable_symbol(self):
+        self.assertResult({a})
+
+    @args(grammar_4, A, E)
+    def test_nullable_prefix(self):
+        self.assertResult({a, x})
+
+    @args(grammar_4, S)
+    def test_through_nullable_symbol(self):
+        self.assertResult({a, x})
+
+    @args(grammar_4, A, A)
+    def test_all_nullable(self):
+        self.assertResult({a})
+
+    @args(grammar_5, B)
+    def test_mutual_recursion(self):
+        self.assertResult({y})
+
+    @args(grammar_1, PLUS, E)
+    def test_terminal(self):
+        self.assertResult({PLUS})
+
+    @args(grammar_1)
+    def test_empty_sequence(self):
+        self.assertResult(set())
+
+
+class TestGeneratorFollow(TestCase):
+    def subject(self, grammar, symbol):
+        return LR0Generator(grammar)._follow(symbol)
+
+    @args(grammar_1, T)
+    def test_unit_rule(self):
+        self.assertResult({PLUS, EOF})
+
+    @args(grammar_1, E)
+    def test_right_recursion(self):
+        self.assertResult({EOF})
+
+    @args(grammar_3, T)
+    def test_leading_non_terminal(self):
+        self.assertResult({PLUS})
+
+    @args(grammar_2, C)
+    def test_nested(self):
+        self.assertResult({EOF, LPAREN, RPAREN})
+
+    @args(grammar_4, A)
+    def test_nullable_symbol(self):
+        self.assertResult({x})
+
+    @args(grammar_5, A)
+    def test_mutual_tail_recursion_a(self):
+        self.assertResult({EOF})
+
+    @args(grammar_5, B)
+    def test_mutual_tail_recursion_b(self):
+        self.assertResult({EOF})
+
+
+class TestGeneratorNullable(TestCase):
+    def subject(self, grammar):
+        return LR0Generator(grammar)._nullable
+
+    @args(grammar_1)
+    def test_no_nullable_symbols(self):
+        self.assertResult(set())
+
+    @args(grammar_4)
+    def test_nullable_symbol(self):
+        self.assertResult({A})
+
+
+class TestLR0GeneratorClosureWithoutUnitRules(TestCase):
+    def subject(self, items):
+        return LR0Generator(grammar_3).closure(items)
+
+    # S -> . E $
+    @args({LR0Item(grammar_3.starting_rule, 0)})
+    def test_with_starting_item(self):
+        self.assertSetEqual(
+            set(map(str, self.result())),
+            {"S -> . E $", "E -> . T + x", "T -> . x"},
+        )
+
+
+class TestLR1GeneratorClosureWithNullableSymbols(TestCase):
+    def subject(self, grammar, items):
+        return LR1Generator(grammar).closure(items)
+
+    def assert_items(self, items):
+        self.assertSetEqual(set(map(str, self.result())), items)
+
+    # S -> . E $, $
+    @args(grammar_3, {LR1Item(grammar_3.starting_rule, 0, EOF)})
+    def test_without_unit_rules(self):
+        self.assert_items({"S -> . E $, $", "E -> . T + x, $", "T -> . x, +"})
+
+    # S -> . A E $, $
+    @args(grammar_4, {LR1Item(grammar_4.starting_rule, 0, EOF)})
+    def test_nullable_symbol(self):
+        self.assert_items({"S -> . A E $, $", "A -> . a, x", "A -> . ε, x"})
+
+    # S -> . T A x $, $
+    @args(grammar_7, {LR1Item(grammar_7.starting_rule, 0, EOF)})
+    def test_nullable_symbol_followed_by_more_symbols(self):
+        self.assert_items({"S -> . T A x $, $", "T -> . y, a", "T -> . y, x"})
+
+
+class TestGeneratorWithEmptyRules(TestCase):
+    def subject(self, generator_cls, grammar):
+        return generator_cls(grammar).generate()
+
+    def assert_no_null_actions(self):
+        for row in self.result().rows.values():
+            self.assertNotIn(NULL, row)
+
+    def assert_no_null_column(self):
+        lines = self.result().pretty_str().splitlines()
+        header = next(line for line in lines if line.startswith("|     |"))
+        self.assertNotIn("ε", header)
+
+    @args(LR0Generator, grammar_4)
+    def test_lr0_no_null_actions(self):
+        self.assert_no_null_actions()
+
+    @args(SLRGenerator, grammar_4)
+    def test_slr_no_null_actions(self):
+        self.assert_no_null_actions()
+
+    @args(LR1Generator, grammar_4)
+    def test_lr1_no_null_actions(self):
+        self.assert_no_null_actions()
+
+    @args(SLRGenerator, grammar_4)
+    def test_no_null_column(self):
+        self.assert_no_null_column()
+
+    @args(SLRGenerator, grammar_8)
+    def test_without_null_token_no_null_column(self):
+        self.assert_no_null_column()

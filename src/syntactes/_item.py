@@ -22,9 +22,9 @@ class LR0Item:
     def dot_is_last(self) -> bool:
         """
         Returns True if the dot in the item is in the last position of the rhs,
-        False otherwise.
+        False otherwise. Items of empty rules are always complete.
         """
-        return self.position == self.rule.rhs_len
+        return self.position == self.rule.rhs_len or self.rule.is_empty()
 
     @property
     def after_dot(self) -> Token | None:

@@ -16,7 +16,7 @@ tokens = {EOF, S, E, T, x, PLUS}
 rule_1 = Rule(0, S, E, EOF)
 rule_2 = Rule(1, E, T, PLUS, E)
 rule_3 = Rule(2, E, T)
-rule_4 = Rule(4, T, x)
+rule_4 = Rule(3, T, x)
 
 rules = (rule_1, rule_2, rule_3, rule_4)
 

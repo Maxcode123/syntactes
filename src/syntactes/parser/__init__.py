@@ -5,10 +5,6 @@ from .exception import (
     ParserError as ParserError,
     UnexpectedTokenError as UnexpectedTokenError,
 )
-from .execute import (
-    ExecutablesRegistry as ExecutablesRegistry,
-    execute_on as execute_on,
-)
 from .parser import (
     LR0Parser as LR0Parser,
     SLRParser as SLRParser,

@@ -16,9 +16,12 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.13"]
+        # Set iteration order depends on the hash seed, so run under several.
+        hash-seed: ["0", "1", "42", "random"]
 
     env:
       UV_PYTHON: ${{ matrix.python-version }}
+      PYTHONHASHSEED: ${{ matrix.hash-seed }}
 
     steps:
     - uses: actions/checkout@v4
