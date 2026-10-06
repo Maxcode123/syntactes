@@ -30,9 +30,9 @@ Tooling notes:
 - ty and ruff target Python 3.13, which they take from `requires-python`.
 - The `__init__.py` files use `# isort: skip_file`. Their import order resolves
   the circular imports between package modules, so don't sort them.
-- State numbering and token order in output depend on set iteration, which
-  varies between runs. To compare output across changes, fix
-  `PYTHONHASHSEED`.
+- Table generation is deterministic: states are numbered breadth-first and
+  output doesn't depend on `PYTHONHASHSEED`. `test_determinism.py` checks
+  this across seeds, and CI runs the suite under several.
 
 ## Architecture
 
@@ -65,6 +65,11 @@ All code lives in `src/syntactes/`:
   - `exception.py`: `ParserError` and its subclasses.
 - `tests/`: `data.py` holds the shared test grammars, rules, states and parsing
   tables. `test_generator.py` and `test_parser.py` use them.
+  `c_grammar.py` (ANSI C89) and `python_grammar.py` (Python 3.8) hold real
+  language grammars, written in the yacc-like BNF that `_bnf.py` loads, with a
+  lexer and a parser whose callbacks rebuild the source with every expression
+  in parentheses. Their LR1 tables take a few seconds to generate and are
+  cached per test run.
 
 `examples/` holds runnable scripts. They're not part of the package.
 
@@ -96,7 +101,8 @@ All code lives in `src/syntactes/`:
   `subject(...)`, test methods are decorated with `@args(...)`, and they call
   `self.result()`, `self.assertResult(...)` or
   `self.assertResultRaises(...)`. Shared setup and assert helpers go on a base
-  `TestCase`. New grammars, states and tables go in `tests/data.py`.
+  `TestCase`. New grammars, states and tables go in `tests/data.py`, except
+  full language grammars, which get a module of their own.
 - **Git:**
   - Always work on a branch, never directly on `main`.
   - Make small atomic commits, each one passing the checks.

@@ -14,14 +14,18 @@ class Rule:
         self.lhs = lhs
         self.rhs = rhs
         self.rhs_len = len(rhs)
+        # Rules are hashed and checked for emptiness constantly while generating
+        # tables, so both are computed once.
+        null = Token.null()
+        self._is_empty = all(s == null for s in rhs)
+        self._hash = hash((lhs, rhs))
 
     def is_empty(self) -> bool:
         """
         Returns True if the rule derives the empty string directly, i.e. its
         right-hand side is empty or only ε.
         """
-        null = Token.null()
-        return all(s == null for s in self.rhs)
+        return self._is_empty
 
     def has_null_rhs(self) -> bool:
         """
@@ -39,9 +43,12 @@ class Rule:
         return f"{self.lhs} -> " + " ".join(map(str, self.rhs))
 
     def __hash__(self) -> int:
-        return hash((self.lhs, self.rhs))
+        return self._hash
 
     def __eq__(self, other) -> bool:
+        if self is other:
+            return True
+
         if not isinstance(other, Rule):
             return False
 

@@ -18,6 +18,7 @@ class LR0Item:
     def __init__(self, rule: Rule, position: int) -> None:
         self.rule = rule
         self.position = position
+        self._hash = hash((rule, position))
 
     def dot_is_last(self) -> bool:
         """
@@ -57,7 +58,7 @@ class LR0Item:
         return f"{self.rule.lhs} -> " + " ".join(map(str, rhs))
 
     def __hash__(self) -> int:
-        return hash((self.rule, self.position))
+        return self._hash
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, LR0Item):
@@ -76,6 +77,7 @@ class LR1Item(LR0Item):
         self.rule = rule
         self.position = position
         self.lookahead_token = lookahead_token
+        self._hash = hash((rule, position, lookahead_token))
 
     def __repr__(self) -> str:
         return f"<LR1Item: {self}>"
@@ -90,7 +92,7 @@ class LR1Item(LR0Item):
         )
 
     def __hash__(self) -> int:
-        return hash((self.rule, self.position, self.lookahead_token))
+        return self._hash
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, LR1Item):
