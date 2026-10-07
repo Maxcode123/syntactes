@@ -1,4 +1,4 @@
-.PHONY: clean test lint format type-check install-local-package build-package upload-package
+.PHONY: clean test lint format type-check install-local-package build-package upload-package start-doc-server deploy-documentation
 
 clean:
 	rm -rf src/syntactes/__pycache__ src/syntactes/tests/__pycache__ src/syntactes/parser/__pycache__ src/syntactes/parsing_table/__pycache__
@@ -24,3 +24,9 @@ build-package:
 
 upload-package:
 	uv publish
+
+start-doc-server:
+	uv run python -m mkdocs serve
+
+deploy-documentation:
+	uv run python -m mkdocs gh-deploy --config-file mkdocs.yml
