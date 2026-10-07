@@ -16,6 +16,11 @@ from syntactes.parsing_table import (
 
 
 class Generator[ItemT: LR0Item, StateT: LR0State](ABC):
+    """
+    Base class of the parsing table generators. Computes the FIRST and FOLLOW
+    sets of the grammar, and builds the automaton states and the table.
+    """
+
     table_cls: type[ParsingTable]
     state_cls: type[StateT]
     item_cls: type[ItemT]
@@ -348,6 +353,11 @@ class LR0Generator(Generator[LR0Item, LR0State]):
 
 
 class SLRGenerator(LR0Generator):
+    """
+    Generator of SLR parsing tables. Like LR0, but only reduces on the tokens
+    that can follow the rule's left-hand side.
+    """
+
     table_cls = SLRParsingTable
 
     def _create_reduce_entries(self, states: list[LR0State]) -> list[Entry]:
@@ -371,6 +381,11 @@ class SLRGenerator(LR0Generator):
 
 
 class LR1Generator(Generator[LR1Item, LR1State]):
+    """
+    Generator of LR1 parsing tables. Each item carries a lookahead token, and
+    rules are only reduced on their lookaheads.
+    """
+
     table_cls = LR1ParsingTable
     state_cls = LR1State
     item_cls = LR1Item

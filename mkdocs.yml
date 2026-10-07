@@ -1,0 +1,52 @@
+site_name: syntactes
+site_url: https://maximosnikiforakis.gr/syntactes/
+repo_url: https://github.com/Maxcode123/syntactes
+repo_name: Maxcode123/syntactes
+nav:
+  - Get started:
+    - What is syntactes?: index.md
+    - Installation: installation.md
+    - Grammars: grammars.md
+    - Parsing tables: parsing-tables.md
+    - Parsing: parsing.md
+
+  - API Documentation:
+    - syntactes: syntactes.md
+    - parser: parser.md
+    - parsing_table: parsing_table.md
+
+theme:
+  name: material
+  font: false
+  logo: assets/favicon.svg
+  favicon: assets/favicon.svg
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.path
+    - content.code.copy
+  # Dark only, like the lectes docs: arcade.css maps slate's colours onto the
+  # syntactes palette.
+  palette:
+    scheme: slate
+    primary: custom
+    accent: custom
+  icon:
+    repo: fontawesome/brands/github
+
+extra_css:
+  - stylesheets/arcade.css
+
+plugins:
+- mkdocstrings
+- search
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences

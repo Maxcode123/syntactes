@@ -10,6 +10,10 @@ type Row = dict[Token, list[Action]]
 
 
 class ParsingTable(Protocol):
+    """
+    The interface of the parsing tables that generators create and parsers use.
+    """
+
     rows: dict[LR0State, Row]
 
     @property
@@ -151,6 +155,10 @@ class LR0ParsingTable:
 
 
 class SLRParsingTable(LR0ParsingTable):
+    """
+    Table that contains all the transitions from state to state with a symbol.
+    """
+
     def _header_str(self) -> str:
         return "SLR PARSING TABLE"
 

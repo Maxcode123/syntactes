@@ -2,14 +2,15 @@
 
 A simple Python parser generator. You give it a grammar (tokens and rules), and
 it builds LR0, SLR or LR1 parsing tables and parsers that run user callbacks on
-each reduction. It's a library published on PyPI. There's no docs site; the
-README is the documentation.
+each reduction. It's a library published on PyPI. Docs are at
+https://maximosnikiforakis.gr/syntactes/.
 
 ## Commands
 
-Use uv for everything. Dev tools (unittest-extensions, ruff, ty) are in the `dev`
-dependency group, locked in `uv.lock`. Bare `python` doesn't work here, because
-there's no `.python-version` for pyenv. Always go through `uv run python …`.
+Use uv for everything. Dev tools (unittest-extensions, ruff, ty, and mkdocs for
+the docs) are in the `dev` dependency group, locked in `uv.lock`. Bare `python`
+doesn't work here, because there's no `.python-version` for pyenv. Always go
+through `uv run python …`.
 
 ```sh
 make test          # whole unit suite (unittest discover)
@@ -18,6 +19,8 @@ make type-check    # ty
 make format        # ruff format (src and examples)
 uv run python -m unittest syntactes.tests.test_parser   # one module
 uv run python examples/parser.py                        # run an example
+uv run mkdocs build --strict -d <scratch dir>           # check the docs
+make start-doc-server                                   # serve the docs locally
 ```
 
 Before every commit, run `make test`, `make lint` and `make type-check`, and
@@ -77,6 +80,13 @@ All code lives in `src/syntactes/`:
 
 `examples/` holds runnable scripts. They're not part of the package.
 
+The docs site (`mkdocs.yml`, `docs/`) is MkDocs Material with mkdocstrings,
+laid out like the lectes docs (`../lectes`). Its guide pages are
+`grammars.md`, `parsing-tables.md` and `parsing.md`. It shares lectes's arcade
+look, with its own green phosphor palette: `docs/stylesheets/arcade.css` maps
+Material's dark (`slate`) palette onto the `--sx-*` colours. The fonts in
+`docs/assets/fonts/` are copied from lectes.
+
 ## Rules
 
 - **No runtime dependencies** (`dependencies = []`). Use the stdlib only, and
@@ -113,10 +123,18 @@ All code lives in `src/syntactes/`:
   - Write commit subjects in the present tense, third person, e.g. "Adds …",
     "Defines …", "Fixes …", "Increments version to X.Y.Z". Add a body
     explaining *why* when it isn't obvious.
-  - Don't merge into `main`, push, tag or publish unless asked. When asked to
-    merge, use `git merge --no-ff <branch>` (message: `Merge branch '<branch>'`).
-- **Docs:** update `README.md` (and `examples/` if relevant) with every
-  user-facing change, on the same branch.
+  - Don't merge into `main`, push, tag, publish or deploy docs unless asked.
+    When asked to merge, use `git merge --no-ff <branch>` (message:
+    `Merge branch '<branch>'`).
+- **Docs go with every user-facing change, on the same branch:**
+  - Update the relevant `docs/*.md` page, and `README.md` and `examples/` if
+    needed. Run every code sample you add, and paste its real output. Don't
+    print anything whose order changes between runs, like a state's items.
+  - Add a bullet under `## X.Y.Z - Unreleased` in `CHANGELOG.md`, in the
+    `Breaking changes` / `Added` / `Changed` / `Fixed` sections.
+  - New pages go in the `mkdocs.yml` nav. API pages are `::: module` stubs
+    rendered by mkdocstrings, which leaves out objects without a docstring,
+    so give new public classes and methods one.
 - **Code style:**
   - Formatting is ruff's (line length 88).
   - Type hints everywhere, and ty must pass. Prefer real narrowing (e.g.
@@ -129,8 +147,9 @@ All code lives in `src/syntactes/`:
 
 ## Release (only when asked)
 
-1. On the branch, set `version` in `pyproject.toml`, run `uv lock`, and commit
-   as "Increments version to X.Y.Z".
+1. On the branch, set `version` in `pyproject.toml`, run `uv lock`, change
+   `## X.Y.Z - Unreleased` in `CHANGELOG.md` to today's date, and commit as
+   "Increments version to X.Y.Z".
 2. Merge into `main` with `--no-ff`, run `make test`, then
    `git push origin main`.
 3. Run `git tag vX.Y.Z` (with a `v` prefix, like the earlier tags), then
@@ -140,9 +159,13 @@ All code lives in `src/syntactes/`:
    It should hold all subpackages and no `tests`.
 5. Run `make upload-package` (`uv publish`). It reads `UV_PUBLISH_TOKEN` from
    `.envrc` (via direnv). Never print it.
-6. Verify from outside the repo, with `PYTHONPATH` unset:
+6. Run `make deploy-documentation` (`mkdocs gh-deploy`). GitHub Pages takes a
+   few minutes to rebuild. Check progress with
+   `gh api repos/Maxcode123/syntactes/pages/builds/latest`.
+7. Verify from outside the repo, with `PYTHONPATH` unset:
    `uvx --refresh --from syntactes==X.Y.Z python -c "import syntactes"`. Then
-   run an example against it.
+   run an example against it, and check the changed docs pages on the live
+   site.
 
 Pitfalls:
 
