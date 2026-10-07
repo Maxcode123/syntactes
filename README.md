@@ -3,6 +3,15 @@
 [![image](https://img.shields.io/pypi/l/syntactes.svg)](https://opensource.org/license/mit/)
 [![image](https://img.shields.io/pypi/pyversions/syntactes.svg)](https://pypi.python.org/pypi/syntactes)
 [![Actions status](https://github.com/Maxcode123/syntactes/actions/workflows/test-package.yml/badge.svg?branch=main)](https://github.com/Maxcode123/syntactes/actions/workflows/test-package.yml?query=branch%3Amain)
+
+<p align="center">
+  <a href="https://maximosnikiforakis.gr/syntactes/"><b>Documentation</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://pypi.org/project/syntactes/"><b>PyPI</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/Maxcode123/syntactes"><b>GitHub</b></a>
+</p>
+
 ---
 # syntactes
 A simpler Python parser generator.  
@@ -165,104 +174,15 @@ Parsing stream: 1 + $
 ParserError: Received token: $; expected one of: ['x']
 ```
 
-## Callbacks
+## Learn more
 
-Callbacks are registered on a parser with `@parser.execute_on(rule)`. Registering
-a rule that is not in the parser's grammar raises `ValueError`.
+The [documentation](https://maximosnikiforakis.gr/syntactes/) covers the rest:
 
-* On each reduction, the rule's callback is called with one token per right-hand
-  side symbol, in order.
-* The callback's return value becomes the `value` of the token pushed for the
-  left-hand side, so the callback of an enclosing rule receives it. A rule
-  without a callback pushes a token whose value is `None`.
-* When the parser accepts, the starting rule's callback is called with its
-  right-hand side tokens, except the trailing `$`. Its return value is returned
-  by `parse()`. Without a callback for the starting rule, `parse()` returns
-  `None`.
-* Exceptions raised in callbacks propagate out of `parse()` unchanged.
-
-## Errors
-
-`parse()` raises a `syntactes.parser.ParserError`:
-
-* `UnexpectedTokenError` if a token has no action in the current state, or if
-  tokens follow the `$` that completed the parse. Its `expected_tokens` holds
-  the terminals that would have been accepted, sorted.
-* `NotAcceptedError` if the stream ends before the parser accepts.
-
-## Grammars
-
-`Grammar` raises `syntactes.GrammarError` (a `ValueError`) if:
-
-* the starting rule is not in the rules, or doesn't end with `$`;
-* `$` appears anywhere other than at the end of the starting rule;
-* a rule's left-hand side is a terminal;
-* a rule uses a symbol that is not in the tokens (`ε` is always allowed);
-* a non-terminal has no rules;
-* two rules have the same number.
-
-`GrammarError.problems` holds the message as `[(None, message)]`.
-
-An empty rule can be written as `Rule(n, A)` or `Rule(n, A, Token.null())`. Its
-callback is called with no arguments.
-
-## Grammars from text
-
-`Grammar.from_text` builds a grammar from text with one rule per line:
-
-```py
-from syntactes import Grammar
-
-grammar = Grammar.from_text("""
-# Sums of numbers
-expr -> expr PLUS NUMBER
-expr -> NUMBER
-""")
-
-for rule in grammar.rules:
-    print(f"{rule.number}. {rule}")
-print(sorted(map(str, grammar.terminals())))
-```
-
-```
-0. <start> -> expr $
-1. expr -> expr PLUS NUMBER
-2. expr -> NUMBER
-['NUMBER', 'PLUS']
-```
-
-* A rule is a left-hand side, `->`, then the right-hand side symbols separated
-  by whitespace. Names match `[A-Za-z_][A-Za-z0-9_]*`.
-* Names that appear on a left-hand side are non-terminals. Every other symbol is
-  a terminal. `grammar.terminals()` returns them, without `$` and `ε`.
-* An empty right-hand side (`items ->`), or a lone `ε` (`items -> ε`), is an
-  empty rule.
-* Blank lines and lines starting with `#` are ignored.
-* The first rule's left-hand side is the start symbol. The starting rule
-  `<start> -> expr $` is added as rule 0, and the rules of the text are numbered
-  from 1 in order, so rule `n` is the `n`-th rule line.
-
-`from_text` reports every problem at once. It raises `GrammarError`, whose
-`problems` holds `(line, message)` pairs. `line` is 1-based, or `None` for a
-problem that isn't tied to a line, such as an empty grammar:
-
-```py
-Grammar.from_text("expr NUMBER\nexpr -> NUMBER $\n")
-# GrammarError.problems:
-# [(1, "expected 'lhs -> symbols'"), (2, "'$' is reserved for the end of the input")]
-```
-
-A line is an error if it has no `->`, an invalid name, a `$`, an `ε` next to
-other symbols, or repeats an earlier rule.
-
-A valid grammar that is probably not what was intended raises a
-`syntactes.GrammarWarning` (with `line` and `message`) through `warnings.warn`
-for each non-terminal that can't be reached from the start symbol, or can't
-derive a string of terminals.
-
-## Conflicts
-
-`table.conflicts()` lists the cells of a parsing table that hold more than one
-action. When parsing, conflicts are resolved the way yacc resolves them: shift
-wins over reduce, and between reduces the rule with the lowest number wins. For
-example, with `E -> E + E`, `x + x + x` is parsed as `x + (x + x)`.
+* [Grammars](https://maximosnikiforakis.gr/syntactes/grammars/): writing grammars as text with
+  `Grammar.from_text`, building them from `Token`s and `Rule`s, empty rules,
+  and the errors and warnings for malformed grammars.
+* [Parsing tables](https://maximosnikiforakis.gr/syntactes/parsing-tables/): the LR0, SLR and LR1
+  generators, reading `pretty_str()`, and finding conflicts.
+* [Parsing](https://maximosnikiforakis.gr/syntactes/parsing/): callbacks, `ParserError`s, and how the
+  parser resolves conflicts.
+* [API reference](https://maximosnikiforakis.gr/syntactes/syntactes/).
