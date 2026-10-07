@@ -1,4 +1,7 @@
-class ParserError(Exception): ...
+class ParserError(Exception):
+    """
+    Base class of the errors raised by `parse()`.
+    """
 
 
 class UnexpectedTokenError(ParserError):

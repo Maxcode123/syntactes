@@ -6,6 +6,10 @@ from syntactes._state import LR0State
 
 
 class ConflictType(Enum):
+    """
+    The kinds of actions that conflict in a cell of a parsing table.
+    """
+
     SHIFT_SHIFT = "shift/shift"
     SHIFT_REDUCE = "shift/reduce"
     REDUCE_REDUCE = "reduce/reduce"
@@ -13,6 +17,11 @@ class ConflictType(Enum):
 
 
 class Conflict:
+    """
+    A cell of a parsing table with more than one action: the `actions` for
+    `token` in `state`.
+    """
+
     def __init__(self, state: LR0State, token: Token, actions: list[Action]) -> None:
         self.state = state
         self.token = token
@@ -37,6 +46,9 @@ class Conflict:
 
     @property
     def conflict_type(self) -> ConflictType:
+        """
+        The kind of the conflict, from the types of its actions.
+        """
         if self._conflict_type is None:
             self._conflict_type = self._create_type()
 

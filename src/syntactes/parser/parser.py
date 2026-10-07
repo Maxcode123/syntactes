@@ -26,6 +26,11 @@ def _do_nothing(*_: Token) -> None:
 
 
 class Parser(ABC):
+    """
+    Base class of the LR parsers. Parses a stream of tokens with a parsing table,
+    and calls the callbacks registered with `execute_on` on each reduction.
+    """
+
     generator_cls: type
 
     def __init__(self, table: ParsingTable) -> None:
@@ -161,12 +166,24 @@ class Parser(ABC):
 
 
 class LR0Parser(Parser):
+    """
+    Parser that uses an LR0 parsing table.
+    """
+
     generator_cls = LR0Generator
 
 
 class SLRParser(Parser):
+    """
+    Parser that uses an SLR parsing table.
+    """
+
     generator_cls = SLRGenerator
 
 
 class LR1Parser(Parser):
+    """
+    Parser that uses an LR1 parsing table.
+    """
+
     generator_cls = LR1Generator
