@@ -11,6 +11,7 @@ The name is derived from Greek _συντάκτης_ (/sin'daktis/) meaning edito
 ## Features
 * Parsing table creation (LR0, SLR and LR1)
 * Token parsing, with callbacks that compute values on each reduction
+* Grammars written as text, one rule per line
 
 ## Installation
 ```
@@ -200,8 +201,64 @@ a rule that is not in the parser's grammar raises `ValueError`.
 * a non-terminal has no rules;
 * two rules have the same number.
 
+`GrammarError.problems` holds the message as `[(None, message)]`.
+
 An empty rule can be written as `Rule(n, A)` or `Rule(n, A, Token.null())`. Its
 callback is called with no arguments.
+
+## Grammars from text
+
+`Grammar.from_text` builds a grammar from text with one rule per line:
+
+```py
+from syntactes import Grammar
+
+grammar = Grammar.from_text("""
+# Sums of numbers
+expr -> expr PLUS NUMBER
+expr -> NUMBER
+""")
+
+for rule in grammar.rules:
+    print(f"{rule.number}. {rule}")
+print(sorted(map(str, grammar.terminals())))
+```
+
+```
+0. <start> -> expr $
+1. expr -> expr PLUS NUMBER
+2. expr -> NUMBER
+['NUMBER', 'PLUS']
+```
+
+* A rule is a left-hand side, `->`, then the right-hand side symbols separated
+  by whitespace. Names match `[A-Za-z_][A-Za-z0-9_]*`.
+* Names that appear on a left-hand side are non-terminals. Every other symbol is
+  a terminal. `grammar.terminals()` returns them, without `$` and `ε`.
+* An empty right-hand side (`items ->`), or a lone `ε` (`items -> ε`), is an
+  empty rule.
+* Blank lines and lines starting with `#` are ignored.
+* The first rule's left-hand side is the start symbol. The starting rule
+  `<start> -> expr $` is added as rule 0, and the rules of the text are numbered
+  from 1 in order, so rule `n` is the `n`-th rule line.
+
+`from_text` reports every problem at once. It raises `GrammarError`, whose
+`problems` holds `(line, message)` pairs. `line` is 1-based, or `None` for a
+problem that isn't tied to a line, such as an empty grammar:
+
+```py
+Grammar.from_text("expr NUMBER\nexpr -> NUMBER $\n")
+# GrammarError.problems:
+# [(1, "expected 'lhs -> symbols'"), (2, "'$' is reserved for the end of the input")]
+```
+
+A line is an error if it has no `->`, an invalid name, a `$`, an `ε` next to
+other symbols, or repeats an earlier rule.
+
+A valid grammar that is probably not what was intended raises a
+`syntactes.GrammarWarning` (with `line` and `message`) through `warnings.warn`
+for each non-terminal that can't be reached from the start symbol, or can't
+derive a string of terminals.
 
 ## Conflicts
 

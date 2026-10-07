@@ -1,12 +1,45 @@
+import warnings
 from collections.abc import Iterable
+from typing import Self
 
-from syntactes import Rule, Token
+from syntactes import Rule, Token, _text
 
 
 class GrammarError(ValueError):
     """
     The grammar is malformed.
+
+    Every error found is available as `problems`, a list of `(line, message)`
+    pairs. `line` is the 1-based line of the text passed to `Grammar.from_text`,
+    or None when the problem isn't tied to a line.
     """
+
+    def __init__(
+        self, message: str, problems: list[tuple[int | None, str]] | None = None
+    ) -> None:
+        super().__init__(message)
+        self.problems = [(None, message)] if problems is None else problems
+
+    @classmethod
+    def from_problems(cls, problems: list[tuple[int | None, str]]) -> Self:
+        message = "\n".join(
+            text if line is None else f"line {line}: {text}" for line, text in problems
+        )
+        return cls(message, problems)
+
+
+class GrammarWarning(UserWarning):
+    """
+    The text passed to `Grammar.from_text` is a valid grammar, but probably not
+    what was intended.
+
+    The 1-based line is available as `line` and the text as `message`.
+    """
+
+    def __init__(self, line: int, message: str) -> None:
+        super().__init__(f"line {line}: {message}")
+        self.line = line
+        self.message = message
 
 
 class Grammar:
@@ -30,6 +63,48 @@ class Grammar:
         self.tokens = tokens
 
         self._validate()
+
+    @classmethod
+    def from_text(cls, text: str) -> Self:
+        """
+        Create a grammar from text with one rule per line:
+
+            expr -> expr PLUS term
+            expr -> term
+            term -> NUMBER
+
+        Names on a left-hand side are non-terminals, and every other symbol is a
+        terminal. An empty right-hand side, or a lone `ε`, is an empty rule.
+        Blank lines and lines starting with `#` are ignored.
+
+        The first rule's left-hand side is the start symbol: the starting rule
+        `<start> -> expr $` is added as rule 0, and the rules of the text are
+        numbered from 1 in order.
+
+        Raises `GrammarError` with every problem found, each with its line.
+        Warns with `GrammarWarning` about non-terminals that can't be reached
+        from the start symbol or can't derive a string of terminals.
+        """
+        parsed = _text.parse(text)
+        if parsed.errors:
+            raise GrammarError.from_problems(parsed.errors)
+
+        for line, message in parsed.warnings:
+            warnings.warn(GrammarWarning(line, message), stacklevel=2)
+
+        tokens = {Token.eof()}
+        for rule in parsed.rules:
+            tokens.add(rule.lhs)
+            tokens.update(rule.rhs)
+
+        return cls(parsed.rules[0], parsed.rules, tokens)
+
+    def terminals(self) -> set[Token]:
+        """
+        Returns the terminals of the grammar, except `$` and `ε`.
+        """
+        special = {Token.eof(), Token.null()}
+        return {t for t in self.tokens if t.is_terminal and t not in special}
 
     def _validate(self) -> None:
         EOF, NULL = Token.eof(), Token.null()

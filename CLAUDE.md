@@ -42,7 +42,11 @@ All code lives in `src/syntactes/`:
   `Token.eof()` (`$`) and `Token.null()` (`ε`). Equality and hashing ignore
   `value`.
 - `rule.py`: `Rule(number, lhs, *rhs)`.
-- `grammar.py`: `Grammar(starting_rule, rules, tokens)`.
+- `grammar.py`: `Grammar(starting_rule, rules, tokens)`, `Grammar.from_text`,
+  `GrammarError` (with `problems`, a list of `(line, message)`) and
+  `GrammarWarning`.
+- `_text.py`: parses the text format for `Grammar.from_text`, collecting every
+  error, and computes its warnings (unreachable and unproductive non-terminals).
 - `_item.py`, `_state.py`, `_action.py`: private LR0/LR1 items, states and
   shift/reduce/accept actions. `LR1Item` subclasses `LR0Item` and `LR1State`
   subclasses `LR0State`, so code typed with the LR0 classes accepts both. `State`
