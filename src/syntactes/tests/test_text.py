@@ -3,6 +3,7 @@ import warnings
 from unittest_extensions import TestCase, args
 
 from syntactes import Grammar, GrammarError, GrammarWarning, Rule, Token
+from syntactes.primitive import Float, Integer, NoneType, String
 
 EOF = Token.eof()
 START = Token("<start>", False)
@@ -28,17 +29,17 @@ class TestFromText(TestCase):
 
     @args(EXPR_TEXT)
     def test_starting_rule_is_added(self):
-        self.assertEqual(self.result().starting_rule, Rule(0, START, expr, EOF))
+        self.assertEqual(self.result().starting_rule, Rule(0, None, START, expr, EOF))
 
     @args(EXPR_TEXT)
     def test_rules_in_line_order(self):
         self.assertEqual(
             self.result().rules,
             (
-                Rule(0, START, expr, EOF),
-                Rule(1, expr, expr, PLUS, term),
-                Rule(2, expr, term),
-                Rule(3, term, NUMBER),
+                Rule(0, None, START, expr, EOF),
+                Rule(1, None, expr, expr, PLUS, term),
+                Rule(2, None, expr, term),
+                Rule(3, None, term, NUMBER),
             ),
         )
 
@@ -60,11 +61,16 @@ class TestFromText(TestCase):
 
     @args("  expr   ->   NUMBER   PLUS  \n")
     def test_extra_whitespace(self):
-        self.assertEqual(self.result().rules[1], Rule(1, expr, NUMBER, PLUS))
+        self.assertEqual(self.result().rules[1], Rule(1, None, expr, NUMBER, PLUS))
 
     @args("expr->NUMBER\n")
     def test_no_whitespace_around_arrow(self):
-        self.assertEqual(self.result().rules[1], Rule(1, expr, NUMBER))
+        self.assertEqual(self.result().rules[1], Rule(1, None, expr, NUMBER))
+
+    @args("int % expr -> expr PLUS NUMBER\n")
+    def test_primitive_not_part_of_symbols(self):
+        rule = self.result().rules[1]
+        self.assertEqual((rule.lhs, rule.rhs), (expr, (expr, PLUS, NUMBER)))
 
     @args("items -> items COMMA NUMBER\nitems ->\n")
     def test_empty_rule_without_symbols(self):
@@ -83,6 +89,64 @@ class TestFromText(TestCase):
     @args("expr -> term\nterm -> NUMBER\n")
     def test_first_lhs_is_start_symbol(self):
         self.assertEqual(self.result().starting_rule.rhs, (expr, EOF))
+
+
+class TestFromTextPrimitives(TestCase):
+    def subject(self, text):
+        return [rule.primitive for rule in Grammar.from_text(text).rules]
+
+    @args("int % expr -> NUMBER\n")
+    def test_int(self):
+        self.assertResult([None, Integer])
+
+    @args("float % expr -> NUMBER\n")
+    def test_float(self):
+        self.assertResult([None, Float])
+
+    @args("str % expr -> NUMBER\n")
+    def test_str(self):
+        self.assertResult([None, String])
+
+    @args("None % expr -> NUMBER\n")
+    def test_none(self):
+        self.assertResult([None, NoneType])
+
+    @args(EXPR_TEXT)
+    def test_without_primitive(self):
+        self.assertResult([None, None, None, None])
+
+    @args("int % expr -> expr PLUS term\nexpr -> term\nstr % term -> NUMBER\n")
+    def test_mixed(self):
+        self.assertResult([None, Integer, None, String])
+
+    @args("  int   %   expr   ->   NUMBER  \n")
+    def test_extra_whitespace(self):
+        self.assertResult([None, Integer])
+
+    @args("int%expr->NUMBER\n")
+    def test_no_whitespace(self):
+        self.assertResult([None, Integer])
+
+    @args("expr -> items\nNone % items ->\n")
+    def test_empty_rule(self):
+        self.assertResult([None, None, NoneType])
+
+
+class TestFromTextRoundTrip(TestCase):
+    def subject(self, text):
+        rules = Grammar.from_text(text).rules[1:]
+        again = Grammar.from_text("\n".join(map(str, rules))).rules[1:]
+        return [(str(rule), rule.primitive) for rule in again]
+
+    @args("int % expr -> expr PLUS term\nexpr -> term\nNone % term ->\n")
+    def test_rules_read_back_from_str(self):
+        self.assertResult(
+            [
+                ("int % expr -> expr PLUS term", Integer),
+                ("expr -> term", None),
+                ("None % term -> ε", NoneType),
+            ]
+        )
 
 
 class TestFromTextErrors(TestCase):
@@ -141,6 +205,38 @@ class TestFromTextErrors(TestCase):
 
     @args("expr ->\nexpr -> ε\n")
     def test_duplicate_empty_rule(self):
+        self.assert_problems([(2, "duplicate of the rule on line 1")])
+
+    @args("bool % expr -> NUMBER\n")
+    def test_invalid_primitive(self):
+        self.assert_problems(
+            [(1, "invalid primitive bool expected one of int, str, float, None")]
+        )
+
+    @args("Integer % expr -> NUMBER\n")
+    def test_primitive_class_name(self):
+        self.assert_problems(
+            [(1, "invalid primitive Integer expected one of int, str, float, None")]
+        )
+
+    @args("% expr -> NUMBER\n")
+    def test_percent_without_primitive(self):
+        self.assert_problems([(1, "expected 'primitive % lhs -> symbols'")])
+
+    @args("int % -> NUMBER\n")
+    def test_primitive_without_lhs(self):
+        self.assert_problems([(1, "rule has no left-hand side")])
+
+    @args("int % 9expr -> NUMBER\n")
+    def test_primitive_with_invalid_lhs(self):
+        self.assert_problems([(1, "invalid left-hand side '9expr'")])
+
+    @args("int % float % expr -> NUMBER\n")
+    def test_two_primitives(self):
+        self.assert_problems([(1, "invalid left-hand side 'float % expr'")])
+
+    @args("int % expr -> NUMBER\nfloat % expr -> NUMBER\n")
+    def test_duplicate_rule_with_other_primitive(self):
         self.assert_problems([(2, "duplicate of the rule on line 1")])
 
     @args("expr NUMBER\nexpr -> NUMBER\n9 -> x\nexpr -> $\n")

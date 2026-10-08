@@ -11,16 +11,19 @@ import re
 from dataclasses import dataclass, field
 
 from syntactes import Rule, Token
+from syntactes.primitive import Float, Integer, NoneType, Primitive, String
 
 START_SYMBOL = "<start>"
 
 _NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 _ARROW = "->"
+_PERCENT = "%"
 
 
 @dataclass
 class _Line:
     number: int
+    primitive: str | None
     lhs: str
     rhs: list[str]
 
@@ -51,10 +54,22 @@ def parse(text: str) -> ParsedText:
     def token(symbol: str) -> Token:
         return Token(symbol, symbol not in non_terminals)
 
+    def primitive(raw: str | None) -> Primitive | None:
+        if not raw or len(raw) == 0:
+            return None
+
+        for prim in {Integer, Float, String, NoneType}:
+            if raw == prim.string():
+                return prim
+
+        return None
+
     start = Token(lines[0].lhs, False)
-    result.rules.append(Rule(0, Token(START_SYMBOL, False), start, Token.eof()))
+    result.rules.append(Rule(0, None, Token(START_SYMBOL, False), start, Token.eof()))
     for number, line in enumerate(lines, start=1):
-        rule = Rule(number, token(line.lhs), *map(token, line.rhs))
+        rule = Rule(
+            number, primitive(line.primitive), token(line.lhs), *map(token, line.rhs)
+        )
         result.rules.append(rule)
 
     result.warnings = _warnings(lines, result.rules[1:], start)
@@ -71,11 +86,19 @@ def _lines(text: str, errors: list[tuple[int | None, str]]) -> list[_Line]:
         if not stripped or stripped.startswith("#"):
             continue
 
-        lhs, arrow, rest = stripped.partition(_ARROW)
-        lhs = lhs.strip()
+        left, arrow, rest = stripped.partition(_ARROW)
+        primitive, percent, lhs = left.partition(_PERCENT)
+
+        if not lhs:
+            lhs = primitive.strip()
+            primitive = None
+        else:
+            primitive = primitive.strip()
+            lhs = lhs.strip()
+
         rhs = rest.split()
 
-        error = _line_error(lhs, arrow, rhs)
+        error = _line_error(primitive, percent, lhs, arrow, rhs)
         if error is not None:
             errors.append((number, error))
             continue
@@ -89,12 +112,14 @@ def _lines(text: str, errors: list[tuple[int | None, str]]) -> list[_Line]:
             continue
 
         seen[key] = number
-        lines.append(_Line(number, lhs, rhs))
+        lines.append(_Line(number, primitive, lhs, rhs))
 
     return lines
 
 
-def _line_error(lhs: str, arrow: str, rhs: list[str]) -> str | None:
+def _line_error(
+    primitive: str | None, percent: str, lhs: str, arrow: str, rhs: list[str]
+) -> str | None:
     if not arrow:
         return f"expected 'lhs {_ARROW} symbols'"
 
@@ -103,6 +128,20 @@ def _line_error(lhs: str, arrow: str, rhs: list[str]) -> str | None:
 
     if not _NAME.fullmatch(lhs):
         return f"invalid left-hand side {lhs!r}"
+
+    if primitive and not lhs:
+        return f"expected 'primitive {_PERCENT} lhs {_ARROW} symbols'"
+
+    if primitive and primitive not in {
+        Integer.string(),
+        Float.string(),
+        String.string(),
+        NoneType.string(),
+    }:
+        return f"invalid primitive {primitive} expected one of int, str, float, None"
+
+    if percent and not primitive:
+        return f"expected 'primitive {_PERCENT} lhs {_ARROW} symbols'"
 
     null, eof = Token.null().symbol, Token.eof().symbol
     for symbol in rhs:

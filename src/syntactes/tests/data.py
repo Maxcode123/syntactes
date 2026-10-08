@@ -27,10 +27,10 @@ tokens_2 = {EOF, S, L, C, LPAREN, RPAREN}
 # 2. E -> T + E
 # 3. E -> T
 # 4. T -> x
-rule_1_1 = Rule(0, S, E, EOF)
-rule_2_1 = Rule(1, E, T, PLUS, E)
-rule_3_1 = Rule(2, E, T)
-rule_4_1 = Rule(3, T, x)
+rule_1_1 = Rule(0, None, S, E, EOF)
+rule_2_1 = Rule(1, None, E, T, PLUS, E)
+rule_3_1 = Rule(2, None, E, T)
+rule_4_1 = Rule(3, None, T, x)
 
 rules_1 = (rule_1_1, rule_2_1, rule_3_1, rule_4_1)
 
@@ -41,11 +41,11 @@ grammar_1 = Grammar(rule_1_1, rules_1, tokens_1)
 # 3. L -> C
 # 4. C -> LPAREN C RPAREN
 # 5. C -> LPAREN RPAREN
-rule_1_2 = Rule(0, S, L, EOF)
-rule_2_2 = Rule(1, L, L, C)
-rule_3_2 = Rule(2, L, C)
-rule_4_2 = Rule(3, C, LPAREN, C, RPAREN)
-rule_5_2 = Rule(4, C, LPAREN, RPAREN)
+rule_1_2 = Rule(0, None, S, L, EOF)
+rule_2_2 = Rule(1, None, L, L, C)
+rule_3_2 = Rule(2, None, L, C)
+rule_4_2 = Rule(3, None, C, LPAREN, C, RPAREN)
+rule_5_2 = Rule(4, None, C, LPAREN, RPAREN)
 
 rules_2 = (rule_1_2, rule_2_2, rule_3_2, rule_4_2, rule_5_2)
 
@@ -66,9 +66,9 @@ tokens_6 = {EOF, S, E, x, PLUS}
 # 0. S -> E $
 # 1. E -> T + x
 # 2. T -> x
-rule_1_3 = Rule(0, S, E, EOF)
-rule_2_3 = Rule(1, E, T, PLUS, x)
-rule_3_3 = Rule(2, T, x)
+rule_1_3 = Rule(0, None, S, E, EOF)
+rule_2_3 = Rule(1, None, E, T, PLUS, x)
+rule_3_3 = Rule(2, None, T, x)
 
 rules_3 = (rule_1_3, rule_2_3, rule_3_3)
 
@@ -79,10 +79,10 @@ grammar_3 = Grammar(rule_1_3, rules_3, tokens_3)
 # 1. A -> a
 # 2. A -> ε
 # 3. E -> x
-rule_1_4 = Rule(0, S, A, E, EOF)
-rule_2_4 = Rule(1, A, a)
-rule_3_4 = Rule(2, A, NULL)
-rule_4_4 = Rule(3, E, x)
+rule_1_4 = Rule(0, None, S, A, E, EOF)
+rule_2_4 = Rule(1, None, A, a)
+rule_3_4 = Rule(2, None, A, NULL)
+rule_4_4 = Rule(3, None, E, x)
 
 rules_4 = (rule_1_4, rule_2_4, rule_3_4, rule_4_4)
 
@@ -93,10 +93,10 @@ grammar_4 = Grammar(rule_1_4, rules_4, tokens_4)
 # 1. A -> x B
 # 2. B -> y A
 # 3. B -> y
-rule_1_5 = Rule(0, S, A, EOF)
-rule_2_5 = Rule(1, A, x, B)
-rule_3_5 = Rule(2, B, y, A)
-rule_4_5 = Rule(3, B, y)
+rule_1_5 = Rule(0, None, S, A, EOF)
+rule_2_5 = Rule(1, None, A, x, B)
+rule_3_5 = Rule(2, None, B, y, A)
+rule_4_5 = Rule(3, None, B, y)
 
 rules_5 = (rule_1_5, rule_2_5, rule_3_5, rule_4_5)
 
@@ -106,9 +106,9 @@ grammar_5 = Grammar(rule_1_5, rules_5, tokens_5)
 # 0. S -> E $
 # 1. E -> E + E
 # 2. E -> x
-rule_1_6 = Rule(0, S, E, EOF)
-rule_2_6 = Rule(1, E, E, PLUS, E)
-rule_3_6 = Rule(2, E, x)
+rule_1_6 = Rule(0, None, S, E, EOF)
+rule_2_6 = Rule(1, None, E, E, PLUS, E)
+rule_3_6 = Rule(2, None, E, x)
 
 rules_6 = (rule_1_6, rule_2_6, rule_3_6)
 
@@ -121,10 +121,10 @@ tokens_7 = {EOF, S, T, A, a, x, y, NULL}
 # 1. T -> y
 # 2. A -> a
 # 3. A -> ε
-rule_1_7 = Rule(0, S, T, A, x, EOF)
-rule_2_7 = Rule(1, T, y)
-rule_3_7 = Rule(2, A, a)
-rule_4_7 = Rule(3, A, NULL)
+rule_1_7 = Rule(0, None, S, T, A, x, EOF)
+rule_2_7 = Rule(1, None, T, y)
+rule_3_7 = Rule(2, None, A, a)
+rule_4_7 = Rule(3, None, A, NULL)
 
 rules_7 = (rule_1_7, rule_2_7, rule_3_7, rule_4_7)
 
@@ -135,7 +135,7 @@ grammar_7 = Grammar(rule_1_7, rules_7, tokens_7)
 # 1. A -> a
 # 2. A ->
 # 3. E -> x
-rule_3_8 = Rule(2, A)
+rule_3_8 = Rule(2, None, A)
 
 rules_8 = (rule_1_4, rule_2_4, rule_3_8, rule_4_4)
 

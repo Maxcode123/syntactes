@@ -56,7 +56,7 @@ class TestParsingTablePrettyStr(TestCase):
 
 class TestParsingTableRuleNumbers(TestCase):
     def subject(self):
-        rule = Rule(7, S, x, EOF)
+        rule = Rule(7, None, S, x, EOF)
         grammar = Grammar(rule, (rule,), {S, x, EOF})
         return SLRGenerator(grammar).generate().pretty_str().splitlines()[2]
 
