@@ -30,8 +30,11 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Maxcode123/syntactes"
+Homepage = "https://maxcode123.github.io/syntactes"
+Documentation = "https://maxcode123.github.io/syntactes"
+Repository = "https://github.com/Maxcode123/syntactes"
 Issues = "https://github.com/Maxcode123/syntactes/issues"
+Changelog = "https://github.com/Maxcode123/syntactes/blob/main/CHANGELOG.md"
 
 [dependency-groups]
 dev = [
