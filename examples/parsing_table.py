@@ -13,10 +13,10 @@ tokens = {EOF, S, E, T, x, PLUS}
 # 1. E -> T + E
 # 2. E -> T
 # 3. T -> x
-rule_1 = Rule(0, S, E, EOF)
-rule_2 = Rule(1, E, T, PLUS, E)
-rule_3 = Rule(2, E, T)
-rule_4 = Rule(3, T, x)
+rule_1 = Rule(0, None, S, E, EOF)
+rule_2 = Rule(1, None, E, T, PLUS, E)
+rule_3 = Rule(2, None, E, T)
+rule_4 = Rule(3, None, T, x)
 
 rules = (rule_1, rule_2, rule_3, rule_4)
 

@@ -44,7 +44,11 @@ All code lives in `src/syntactes/`:
 - `token.py`: `Token` (a symbol, `is_terminal`, and an optional `value`), with
   `Token.eof()` (`$`) and `Token.null()` (`ε`). Equality and hashing ignore
   `value`.
-- `rule.py`: `Rule(number, lhs, *rhs)`.
+- `rule.py`: `Rule(number, primitive, lhs, *rhs)`. `primitive` is a
+  `primitive.py` class or `None`, and equality and hashing ignore it.
+- `primitive.py`: the primitive types a rule can have (`Integer`, `Float`,
+  `String`, `NoneType`). Calling one converts a value, and `string()` is its
+  name in the text format (`int % expr -> NUMBER`).
 - `grammar.py`: `Grammar(starting_rule, rules, tokens)`, `Grammar.from_text`,
   `GrammarError` (with `problems`, a list of `(line, message)`) and
   `GrammarWarning`.

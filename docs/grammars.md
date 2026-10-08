@@ -47,6 +47,49 @@ hold of them, for example to [register callbacks](parsing.md#callbacks):
 start, add, number = grammar.rules
 ```
 
+### Primitives
+
+A rule can start with a primitive type and `%`: `int % expr -> NUMBER`. The
+primitive is one of `int`, `float`, `str` or `None`, and is stored on the rule
+as `rule.primitive`. Rules without one, the starting rule included, have
+`None`.
+
+```python
+from syntactes import Grammar
+from syntactes.primitive import Integer
+
+grammar = Grammar.from_text("""
+None % stmt -> PRINT expr
+int % expr -> expr PLUS NUMBER
+expr -> NUMBER
+""")
+
+for rule in grammar.rules:
+    print(f"{rule.number}. {rule}")
+
+print([rule.primitive for rule in grammar.rules])
+print(repr(Integer("42")))
+```
+
+```
+0. <start> -> stmt $
+1. None % stmt -> PRINT expr
+2. int % expr -> expr PLUS NUMBER
+3. expr -> NUMBER
+[None, <class 'syntactes.primitive.NoneType'>, <class 'syntactes.primitive.Integer'>, None]
+42
+```
+
+`rule.primitive` is one of the classes in `syntactes.primitive`: `Integer`,
+`Float`, `String` and `NoneType`. Calling one converts a value to its type, so
+`Integer("42")` is `42` and `NoneType(x)` is always `None`. Its `string()`
+method returns the name used in the text, which is also how `str(rule)` prints
+it.
+
+The primitive isn't part of the rule's identity: two rules with the same
+symbols are equal whatever their primitives, so `int % expr -> NUMBER` and
+`float % expr -> NUMBER` in the same grammar are duplicates.
+
 ### Errors
 
 `from_text` reports every problem at once. It raises a `GrammarError`, whose
@@ -64,7 +107,8 @@ except GrammarError as e:
 ```
 
 A line is an error if it has no `->`, an invalid name, a `$`, an `ε` next to
-other symbols, or repeats an earlier rule.
+other symbols, an unknown primitive, a `%` without a primitive before it, or
+repeats an earlier rule.
 
 ### Warnings
 
@@ -97,7 +141,8 @@ for warning in caught:
 A `Token` is a symbol, and is either a terminal or a non-terminal. `Token.eof()`
 is the end of the input (`$`), and `Token.null()` is the empty string (`ε`).
 
-A `Rule` takes a number, its left-hand side and its right-hand side symbols.
+A `Rule` takes a number, its [primitive](#primitives) (or `None`), its
+left-hand side and its right-hand side symbols.
 A `Grammar` takes the starting rule, every rule (the starting rule included)
 and the set of tokens.
 
@@ -117,17 +162,21 @@ tokens = {EOF, S, E, T, x, PLUS}
 # 1. E -> T + E
 # 2. E -> T
 # 3. T -> x
-rule_1 = Rule(0, S, E, EOF)
-rule_2 = Rule(1, E, T, PLUS, E)
-rule_3 = Rule(2, E, T)
-rule_4 = Rule(3, T, x)
+rule_1 = Rule(0, None, S, E, EOF)
+rule_2 = Rule(1, None, E, T, PLUS, E)
+rule_3 = Rule(2, None, E, T)
+rule_4 = Rule(3, None, T, x)
 
 rules = (rule_1, rule_2, rule_3, rule_4)
 
 grammar = Grammar(rule_1, rules, tokens)
 ```
 
-An empty rule can be written as `Rule(n, A)` or `Rule(n, A, Token.null())`.
+An empty rule can be written as `Rule(n, None, A)` or
+`Rule(n, None, A, Token.null())`.
+
+To give a rule a primitive, pass one of the `syntactes.primitive` classes
+instead of `None`, as in `Rule(3, Integer, T, x)`.
 
 Tokens are compared by their symbol and whether they're terminal. A token can
 also carry a `value`, which equality and hashing ignore, so `Token("x", True, 1)`

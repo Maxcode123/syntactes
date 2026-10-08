@@ -2,7 +2,19 @@
 
 ## 0.6.1 - Unreleased
 
+### Breaking changes
+
+- `Rule` takes a primitive (or `None`) as its second argument:
+  `Rule(number, primitive, lhs, *rhs)`. Old calls like `Rule(0, S, E, EOF)`
+  don't raise, but read `S` as the primitive and `E` as the left-hand side.
+
 ### Added
+
+- Rules can have a primitive type. In `Grammar.from_text` it's written before
+  the left-hand side, as in `int % expr -> NUMBER`, with one of `int`, `float`,
+  `str` or `None`. It's stored as `Rule.primitive`, one of the new
+  `syntactes.primitive` classes `Integer`, `Float`, `String` and `NoneType`,
+  and printed by `str(rule)`.
 
 - A documentation site at https://maximosnikiforakis.gr/syntactes/, with guide
   pages for grammars, parsing tables and parsing, and an API reference.

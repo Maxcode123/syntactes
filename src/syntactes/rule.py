@@ -8,6 +8,9 @@ class Rule:
     other symbols.
 
     LHS -> RHS1 RHS2...
+
+    `primitive` is one of the `syntactes.primitive` classes, or `None`. It
+    doesn't take part in equality or hashing.
     """
 
     def __init__(

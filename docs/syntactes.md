@@ -5,3 +5,5 @@
 ::: syntactes.grammar
 
 ::: syntactes.generator
+
+::: syntactes.primitive
