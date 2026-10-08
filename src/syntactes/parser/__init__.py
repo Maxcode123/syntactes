@@ -6,6 +6,7 @@ from .exception import (
     UnexpectedTokenError as UnexpectedTokenError,
 )
 from .parser import (
+    Parser as Parser,
     LR0Parser as LR0Parser,
     SLRParser as SLRParser,
     LR1Parser as LR1Parser,
