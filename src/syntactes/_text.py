@@ -11,7 +11,10 @@ import re
 from dataclasses import dataclass, field
 
 from syntactes import Rule, Token
-from syntactes.primitive import Float, Integer, NoneType, Primitive, String
+from syntactes.primitive import (
+    Primitive,
+    primitives,
+)
 
 START_SYMBOL = "<start>"
 
@@ -58,7 +61,7 @@ def parse(text: str) -> ParsedText:
         if not raw or len(raw) == 0:
             return None
 
-        for prim in {Integer, Float, String, NoneType}:
+        for prim in primitives():
             if raw == prim.string():
                 return prim
 
@@ -132,13 +135,9 @@ def _line_error(
     if primitive and not lhs:
         return f"expected 'primitive {_PERCENT} lhs {_ARROW} symbols'"
 
-    if primitive and primitive not in {
-        Integer.string(),
-        Float.string(),
-        String.string(),
-        NoneType.string(),
-    }:
-        return f"invalid primitive {primitive} expected one of int, str, float, None"
+    names = [p.string() for p in primitives()]
+    if primitive and primitive not in names:
+        return f"invalid primitive {primitive} expected one of {', '.join(names)}"
 
     if percent and not primitive:
         return f"expected 'primitive {_PERCENT} lhs {_ARROW} symbols'"
