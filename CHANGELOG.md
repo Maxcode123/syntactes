@@ -1,6 +1,65 @@
 # Changelog
 
-## 0.6.1 - Unreleased
+## 0.8.0 - 2026-10-10
+
+### Breaking changes
+
+- `Rule` no longer takes a primitive: it's `Rule(number, lhs, *rhs)` again,
+  and `Rule.primitive` is removed. Primitives are in `Grammar.primitives`, and
+  `str(rule)` no longer prints them. Calls written for 0.7, like
+  `Rule(0, None, S, E, EOF)`, don't raise, but read `None` as the left-hand
+  side.
+
+- The value types `int`, `float`, `str` and `bool` can only tag a rule with
+  exactly one symbol, the one they convert. `int % expr -> expr PLUS NUMBER`
+  is now an error. `None` can still tag any rule.
+
+- A rule without a callback no longer always pushes `None`. If it has a
+  primitive, the parser applies it, and if it has exactly one symbol, it passes
+  that symbol's value through. So `parse()` now returns the start symbol's
+  value when the starting rule has no callback, where it returned `None`.
+
+### Added
+
+- The `bool` primitive (`Boolean`), and binary operation primitives that take
+  two operands: `add`, `sub`, `mul`, `div`, `pow` (`Addition`, `Subtraction`,
+  `Multiplication`, `Division`, `Exponentiation`) and `lt`, `le`, `gt`, `ge`,
+  `eq`, `ne` (`LowerThanComparison`, `LowerEqualThanComparison`,
+  `GreaterThanComparison`, `GreaterEqualThanComparison`, `EqualityComparison`,
+  `InequalityComparison`).
+
+- `syntactes.primitive.primitives()` returns every primitive.
+
+- `Grammar.primitives`, a read-only mapping from rules to their primitive.
+  `Grammar` takes it as the keyword-only argument `primitives`, and raises
+  `GrammarError` for a rule that's not in the grammar or a value that isn't a
+  primitive. `Grammar.from_text` fills it from `int % expr -> NUMBER` lines.
+
+- Binary operations can name their operands by 1-based position, as in
+  `add(1,3) % expr -> expr PLUS expr`, and default to the first and last
+  symbols. The positions are in `Grammar.operands`, which `Grammar` also takes
+  as the keyword-only argument `operands`.
+
+- Parsers apply a rule's primitive on reduction when the rule has no callback,
+  and on accept for the starting rule. A failing primitive raises the new
+  `syntactes.parser.PrimitiveError`, a `ParserError`.
+
+- The error for an unknown primitive in `Grammar.from_text` lists every valid
+  name.
+
+### Changed
+
+- Removes the `syntactes.ast` module. It shipped in 0.7.0 and 0.7.1, but was
+  never exported or documented.
+
+## 0.7.1 - 2026-10-08
+
+### Added
+
+- `syntactes.parser` exports the `Parser` base class of `LR0Parser`,
+  `SLRParser` and `LR1Parser`.
+
+## 0.7.0 - 2026-10-08
 
 ### Breaking changes
 

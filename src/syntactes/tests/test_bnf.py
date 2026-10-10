@@ -64,7 +64,6 @@ class TestFindRule(TestCase):
         self.assertResult(
             Rule(
                 4,
-                None,
                 Token("items", False),
                 Token("items", False),
                 Token(",", True),
@@ -74,7 +73,7 @@ class TestFindRule(TestCase):
 
     @args("list")
     def test_finds_empty_rule(self):
-        self.assertResult(Rule(1, None, Token("list", False)))
+        self.assertResult(Rule(1, Token("list", False)))
 
     @args("items", "ITEM", "ITEM")
     def test_missing_rule_raises(self):

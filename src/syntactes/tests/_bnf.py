@@ -43,12 +43,12 @@ def grammar_from_bnf(bnf: str, start: str) -> Grammar:
 
         return Token(word, True)
 
-    starting_rule = Rule(0, None, Token("<start>", False), token(start), Token.eof())
+    starting_rule = Rule(0, Token("<start>", False), token(start), Token.eof())
     rules = [starting_rule]
     for lhs, alternatives in definitions:
         for alternative in alternatives:
             rhs = [token(word) for word in alternative]
-            rules.append(Rule(len(rules), None, token(lhs), *rhs))
+            rules.append(Rule(len(rules), token(lhs), *rhs))
 
     tokens = {starting_rule.lhs, Token.eof()}
     for rule in rules:

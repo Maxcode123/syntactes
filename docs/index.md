@@ -8,7 +8,8 @@ title: What is syntactes?
   <h1 id="what-is-syntactes">Write the grammar.<br>Get the <span>parser.</span></h1>
   <p class="sx-blurb">A small Python parser generator with no dependencies.
   Give it a grammar, and it builds LR0, SLR or LR1 parsing tables, and parsers
-  that run your callbacks on every reduction.</p>
+  that compute values on every reduction, with your callbacks or the grammar's
+  primitives.</p>
   <div class="sx-buttons">
     <a class="md-button md-button--primary" href="installation/">Press start</a>
     <a class="md-button" href="https://github.com/Maxcode123/syntactes">GitHub</a>
@@ -25,6 +26,10 @@ Greek _συντάκτης_ (/sin'daktis/), meaning editor or composer.
 - **Callbacks on every reduction.** Each rule's callback gets one token per
   right-hand side symbol, and its return value becomes the value of the
   left-hand side. See [Parsing](parsing.md).
+- **Primitives in the grammar.** Tag a rule with a primitive, like
+  `add(1,3) % expr -> expr PLUS expr` or `int % term -> NUMBER`, and the parser
+  computes its value without a callback. See
+  [Primitives](parsing.md#primitives).
 - **No dependencies.** It uses only the standard library.
 
 Here's a calculator in a few lines:

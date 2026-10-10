@@ -1,4 +1,3 @@
-from syntactes.primitive import Primitive
 from syntactes.token import Token
 
 
@@ -9,15 +8,12 @@ class Rule:
 
     LHS -> RHS1 RHS2...
 
-    `primitive` is one of the `syntactes.primitive` classes, or `None`. It
-    doesn't take part in equality or hashing.
+    Equality and hashing use only the symbols, not the number. A rule's
+    primitive, if any, is in `Grammar.primitives`.
     """
 
-    def __init__(
-        self, number: int, primitive: Primitive | None, lhs: Token, *rhs: Token
-    ) -> None:
+    def __init__(self, number: int, lhs: Token, *rhs: Token) -> None:
         self.number = number
-        self.primitive = primitive
         self.lhs = lhs
         self.rhs = rhs
         self.rhs_len = len(rhs)
@@ -44,12 +40,10 @@ class Rule:
         return f"<Rule: {self}>"
 
     def __str__(self) -> str:
-        primitive = f"{self.primitive.string()} % " if self.primitive else ""
-
         if self.is_empty():
-            return f"{primitive}{self.lhs} -> {Token.null()}"
+            return f"{self.lhs} -> {Token.null()}"
 
-        return f"{primitive}{self.lhs} -> " + " ".join(map(str, self.rhs))
+        return f"{self.lhs} -> " + " ".join(map(str, self.rhs))
 
     def __hash__(self) -> int:
         return self._hash

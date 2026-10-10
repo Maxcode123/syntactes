@@ -44,16 +44,25 @@ All code lives in `src/syntactes/`:
 - `token.py`: `Token` (a symbol, `is_terminal`, and an optional `value`), with
   `Token.eof()` (`$`) and `Token.null()` (`ε`). Equality and hashing ignore
   `value`.
-- `rule.py`: `Rule(number, primitive, lhs, *rhs)`. `primitive` is a
-  `primitive.py` class or `None`, and equality and hashing ignore it.
-- `primitive.py`: the primitive types a rule can have (`Integer`, `Float`,
-  `String`, `NoneType`). Calling one converts a value, and `string()` is its
-  name in the text format (`int % expr -> NUMBER`).
-- `grammar.py`: `Grammar(starting_rule, rules, tokens)`, `Grammar.from_text`,
-  `GrammarError` (with `problems`, a list of `(line, message)`) and
-  `GrammarWarning`.
-- `_text.py`: parses the text format for `Grammar.from_text`, collecting every
-  error, and computes its warnings (unreachable and unproductive non-terminals).
+- `rule.py`: `Rule(number, lhs, *rhs)`. Equality and hashing use only the
+  symbols, not the number. A rule's primitive lives on the grammar, not on it.
+- `primitive.py`: the primitives a rule can be tagged with. Value types
+  (`Integer`, `Float`, `String`, `NoneType`, `Boolean`) convert one value when
+  called. Binary operations (`Addition`, …, `InequalityComparison`) take two
+  operands. `string()` is a primitive's name in the text format
+  (`int % expr -> NUMBER`, `add(1,3) % expr -> expr PLUS expr`), `primitives()`
+  lists them all, and the private `_is_binary()` tells the kinds apart.
+- `grammar.py`: `Grammar(starting_rule, rules, tokens, *, primitives=None,
+  operands=None)`, `Grammar.from_text`, `GrammarError` (with `problems`, a list
+  of `(line, message)`) and `GrammarWarning`. `grammar.primitives` maps rules to
+  primitives, and `grammar.operands` maps each binary-operation rule to its
+  1-based operand positions, defaulting to the first and last symbols. Both are
+  read-only properties over private dicts, so a `Grammar` stays picklable.
+  Value types other than `None` need exactly one symbol, and binary operations
+  at least two. The starting rule's `$` isn't counted.
+- `_text.py`: parses the text format for `Grammar.from_text`, including
+  `primitive %` and `name(i,j) %` prefixes. It collects every error, and
+  computes the warnings (unreachable and unproductive non-terminals).
 - `_item.py`, `_state.py`, `_action.py`: private LR0/LR1 items, states and
   shift/reduce/accept actions. `LR1Item` subclasses `LR0Item` and `LR1State`
   subclasses `LR0State`, so code typed with the LR0 classes accepts both. `State`
@@ -69,11 +78,13 @@ All code lives in `src/syntactes/`:
 - `parser/`:
   - `parser.py`: `LR0Parser`, `SLRParser` and `LR1Parser`, built from a table or
     with `from_grammar()`. `@parser.execute_on(rule)` registers a callback on
-    that parser. On each reduction it's called with one token per RHS symbol,
-    and its return value becomes the `value` of the pushed LHS token.
-    `parse(stream)` consumes tokens and returns the starting rule callback's
-    value.
-  - `exception.py`: `ParserError` and its subclasses.
+    that parser. On each reduction, the rule's value becomes the `value` of the
+    pushed LHS token. It comes from the callback (called with one token per RHS
+    symbol), else the rule's primitive, else the value of its only token, else
+    `None`. `parse(stream)` consumes tokens and returns the starting rule's
+    value, computed the same way without the trailing `$`.
+  - `exception.py`: `ParserError` and its subclasses, including
+    `PrimitiveError`, which wraps a failing primitive.
 - `tests/`: `data.py` holds the shared test grammars, rules, states and parsing
   tables. `test_generator.py` and `test_parser.py` use them.
   `c_grammar.py` (ANSI C89) and `python_grammar.py` (Python 3.8) hold real

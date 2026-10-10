@@ -49,46 +49,113 @@ start, add, number = grammar.rules
 
 ### Primitives
 
-A rule can start with a primitive type and `%`: `int % expr -> NUMBER`. The
-primitive is one of `int`, `float`, `str` or `None`, and is stored on the rule
-as `rule.primitive`. Rules without one, the starting rule included, have
-`None`.
+A rule can start with a primitive and `%`: `int % expr -> NUMBER`. The
+primitive is stored in `grammar.primitives`, a read-only mapping from rules to
+primitives. Rules without one, the starting rule included, aren't in it. When
+the parser reduces by a rule without a callback, it applies the rule's
+primitive to compute its value. See [Primitives](parsing.md#primitives) in the
+parsing guide.
+
+Each primitive is one of the classes in `syntactes.primitive`. There are two
+kinds. A value type converts one value when it's called:
+
+| Text    | Class      | Call                                        |
+| ------- | ---------- | ------------------------------------------- |
+| `int`   | `Integer`  | `Integer("42")` is `42`                     |
+| `float` | `Float`    | `Float("4.2")` is `4.2`                     |
+| `str`   | `String`   | `String(42)` is `"42"`                      |
+| `None`  | `NoneType` | `NoneType(x)` is always `None`              |
+| `bool`  | `Boolean`  | `True` for `"1"` or `"true"`, else `False`  |
+
+A value type's rule must have exactly one symbol, the one it converts, as in
+`int % expr -> NUMBER`. `None` ignores its input, so it can tag any rule. For
+the starting rule, the trailing `$` doesn't count.
+
+A binary operation takes two operands when it's called, and returns the
+result:
+
+| Text  | Class                        | Call returns     |
+| ----- | ---------------------------- | ---------------- |
+| `add` | `Addition`                   | `left + right`   |
+| `sub` | `Subtraction`                | `left - right`   |
+| `mul` | `Multiplication`             | `left * right`   |
+| `div` | `Division`                   | `left / right`   |
+| `pow` | `Exponentiation`             | `left ** right`  |
+| `lt`  | `LowerThanComparison`        | `left < right`   |
+| `le`  | `LowerEqualThanComparison`   | `left <= right`  |
+| `gt`  | `GreaterThanComparison`      | `left > right`   |
+| `ge`  | `GreaterEqualThanComparison` | `left >= right`  |
+| `eq`  | `EqualityComparison`         | `left == right`  |
+| `ne`  | `InequalityComparison`       | `left != right`  |
 
 ```python
 from syntactes import Grammar
-from syntactes.primitive import Integer
+from syntactes.primitive import Addition, Boolean, Integer, LowerThanComparison
 
 grammar = Grammar.from_text("""
 None % stmt -> PRINT expr
-int % expr -> expr PLUS NUMBER
-expr -> NUMBER
+bool % stmt -> TRUE
+add % expr -> expr PLUS NUMBER
+int % expr -> NUMBER
 """)
 
 for rule in grammar.rules:
-    print(f"{rule.number}. {rule}")
+    primitive = grammar.primitives.get(rule)
+    name = primitive.__name__ if primitive else "-"
+    print(f"{rule.number}. {rule}  [{name}]")
 
-print([rule.primitive for rule in grammar.rules])
-print(repr(Integer("42")))
+print(repr(Integer("42")), repr(Boolean("true")))
+print(Addition(1, 2), LowerThanComparison(1, 2))
 ```
 
 ```
-0. <start> -> stmt $
-1. None % stmt -> PRINT expr
-2. int % expr -> expr PLUS NUMBER
-3. expr -> NUMBER
-[None, <class 'syntactes.primitive.NoneType'>, <class 'syntactes.primitive.Integer'>, None]
-42
+0. <start> -> stmt $  [-]
+1. stmt -> PRINT expr  [NoneType]
+2. stmt -> TRUE  [Boolean]
+3. expr -> expr PLUS NUMBER  [Addition]
+4. expr -> NUMBER  [Integer]
+42 True
+3 True
 ```
 
-`rule.primitive` is one of the classes in `syntactes.primitive`: `Integer`,
-`Float`, `String` and `NoneType`. Calling one converts a value to its type, so
-`Integer("42")` is `42` and `NoneType(x)` is always `None`. Its `string()`
-method returns the name used in the text, which is also how `str(rule)` prints
-it.
+Every primitive's `string()` method returns the name used in the text.
+`syntactes.primitive.primitives()` returns all of them, in the order of the
+tables above. The primitive isn't part of the rule, so `str(rule)` doesn't
+print it.
 
-The primitive isn't part of the rule's identity: two rules with the same
-symbols are equal whatever their primitives, so `int % expr -> NUMBER` and
+Rules are compared by their symbols, so `int % expr -> NUMBER` and
 `float % expr -> NUMBER` in the same grammar are duplicates.
+
+#### Operands
+
+A binary operation can say which right-hand side symbols are its operands, by
+their 1-based positions: `add(1,3) % expr -> expr PLUS expr` adds the first and
+third symbols. The order counts, so `sub(4,2)` is the fourth symbol minus the
+second. Without positions, the operands are the first and last symbols. The
+positions are stored in `grammar.operands`, a read-only mapping that holds every
+rule whose primitive is a binary operation, and no other rule.
+
+```python
+grammar = Grammar.from_text("""
+add(1,3) % expr -> expr PLUS expr
+sub(4,2) % expr -> SUBTRACT expr FROM expr
+mul % expr -> expr TIMES expr
+expr -> NUMBER
+""")
+
+for rule, (left, right) in grammar.operands.items():
+    print(f"{rule}  [{grammar.primitives[rule].__name__} ${left} ${right}]")
+```
+
+```
+expr -> expr PLUS expr  [Addition $1 $3]
+expr -> SUBTRACT expr FROM expr  [Subtraction $4 $2]
+expr -> expr TIMES expr  [Multiplication $1 $3]
+```
+
+A binary operation's rule needs at least 2 symbols, and its two positions must
+be different and between 1 and the number of symbols. Value types don't take
+positions.
 
 ### Errors
 
@@ -107,8 +174,24 @@ except GrammarError as e:
 ```
 
 A line is an error if it has no `->`, an invalid name, a `$`, an `ε` next to
-other symbols, an unknown primitive, a `%` without a primitive before it, or
-repeats an earlier rule.
+other symbols, an unknown primitive, a `%` without a primitive before it, a
+value type on a rule without exactly one symbol, [operand positions](#operands)
+that aren't valid, or repeats an earlier rule.
+The message for an unknown primitive lists the valid names:
+
+```python
+try:
+    Grammar.from_text("integer % expr -> NUMBER\n")
+except GrammarError as e:
+    print(e.problems)
+    # [(1, 'invalid primitive integer expected one of int, float, str, None, bool, add, sub, mul, div, pow, lt, le, gt, ge, eq, ne')]
+
+try:
+    Grammar.from_text("add(1,4) % expr -> expr PLUS expr\nint(1) % expr -> NUMBER\n")
+except GrammarError as e:
+    print(e.problems)
+    # [(1, 'operand position 4 is out of range 1-3'), (2, 'int takes no operand positions')]
+```
 
 ### Warnings
 
@@ -141,8 +224,7 @@ for warning in caught:
 A `Token` is a symbol, and is either a terminal or a non-terminal. `Token.eof()`
 is the end of the input (`$`), and `Token.null()` is the empty string (`ε`).
 
-A `Rule` takes a number, its [primitive](#primitives) (or `None`), its
-left-hand side and its right-hand side symbols.
+A `Rule` takes a number, its left-hand side and its right-hand side symbols.
 A `Grammar` takes the starting rule, every rule (the starting rule included)
 and the set of tokens.
 
@@ -162,21 +244,28 @@ tokens = {EOF, S, E, T, x, PLUS}
 # 1. E -> T + E
 # 2. E -> T
 # 3. T -> x
-rule_1 = Rule(0, None, S, E, EOF)
-rule_2 = Rule(1, None, E, T, PLUS, E)
-rule_3 = Rule(2, None, E, T)
-rule_4 = Rule(3, None, T, x)
+rule_1 = Rule(0, S, E, EOF)
+rule_2 = Rule(1, E, T, PLUS, E)
+rule_3 = Rule(2, E, T)
+rule_4 = Rule(3, T, x)
 
 rules = (rule_1, rule_2, rule_3, rule_4)
 
 grammar = Grammar(rule_1, rules, tokens)
 ```
 
-An empty rule can be written as `Rule(n, None, A)` or
-`Rule(n, None, A, Token.null())`.
+An empty rule can be written as `Rule(n, A)` or
+`Rule(n, A, Token.null())`.
 
-To give a rule a primitive, pass one of the `syntactes.primitive` classes
-instead of `None`, as in `Rule(3, Integer, T, x)`.
+To give rules primitives, pass `Grammar` a mapping from rules to
+`syntactes.primitive` classes as the keyword argument `primitives`, as in
+`Grammar(rule_1, rules, tokens, primitives={rule_4: Integer})`. A rule is
+matched by its symbols, not its number. The mapping is copied, and
+`grammar.primitives` is read-only.
+
+Operand positions go in the keyword argument `operands`, a mapping from rules
+to `(left, right)` pairs, as in `operands={rule_2: (1, 3)}`. A binary
+operation without an entry gets its first and last symbols.
 
 Tokens are compared by their symbol and whether they're terminal. A token can
 also carry a `value`, which equality and hashing ignore, so `Token("x", True, 1)`
@@ -192,7 +281,14 @@ value to pass data to your callbacks.
 - a rule's left-hand side is a terminal;
 - a rule uses a symbol that is not in the tokens (`ε` is always allowed);
 - a non-terminal has no rules;
-- two rules have the same number.
+- two rules have the same number;
+- a primitive is given for a rule that's not in the rules, or isn't one of
+  `syntactes.primitive.primitives()`;
+- operands are given for a rule that's not in the rules, or whose primitive
+  isn't a binary operation;
+- a binary operation's rule has fewer than 2 symbols, or its operand positions
+  are equal or out of range;
+- a value type other than `None` tags a rule without exactly one symbol.
 
 It stops at the first problem, and `problems` holds its message as
 `[(None, message)]`.

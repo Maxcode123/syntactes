@@ -19,7 +19,8 @@ The name is derived from Greek _συντάκτης_ (/sin'daktis/) meaning edito
 
 ## Features
 * Parsing table creation (LR0, SLR and LR1)
-* Token parsing, with callbacks that compute values on each reduction
+* Token parsing, with callbacks or grammar primitives (`add(1,3) % expr -> expr PLUS expr`)
+  that compute values on each reduction
 * Grammars written as text, one rule per line
 
 ## Installation
@@ -46,10 +47,10 @@ tokens = {EOF, S, E, T, x, PLUS}
 # 1. E -> T + E
 # 2. E -> T
 # 3. T -> x
-rule_1 = Rule(0, None, S, E, EOF)
-rule_2 = Rule(1, None, E, T, PLUS, E)
-rule_3 = Rule(2, None, E, T)
-rule_4 = Rule(3, None, T, x)
+rule_1 = Rule(0, S, E, EOF)
+rule_2 = Rule(1, E, T, PLUS, E)
+rule_3 = Rule(2, E, T)
+rule_4 = Rule(3, T, x)
 
 rules = (rule_1, rule_2, rule_3, rule_4)
 
@@ -109,10 +110,10 @@ tokens = {EOF, S, E, T, x, PLUS}
 # 1. E -> T + E
 # 2. E -> T
 # 3. T -> x
-rule_1 = Rule(0, None, S, E, EOF)
-rule_2 = Rule(1, None, E, T, PLUS, E)
-rule_3 = Rule(2, None, E, T)
-rule_4 = Rule(3, None, T, x)
+rule_1 = Rule(0, S, E, EOF)
+rule_2 = Rule(1, E, T, PLUS, E)
+rule_3 = Rule(2, E, T)
+rule_4 = Rule(3, T, x)
 
 rules = (rule_1, rule_2, rule_3, rule_4)
 
@@ -183,6 +184,6 @@ The [documentation](https://maximosnikiforakis.gr/syntactes/) covers the rest:
   and the errors and warnings for malformed grammars.
 * [Parsing tables](https://maximosnikiforakis.gr/syntactes/parsing-tables/): the LR0, SLR and LR1
   generators, reading `pretty_str()`, and finding conflicts.
-* [Parsing](https://maximosnikiforakis.gr/syntactes/parsing/): callbacks, `ParserError`s, and how the
+* [Parsing](https://maximosnikiforakis.gr/syntactes/parsing/): callbacks, primitives, `ParserError`s, and how the
   parser resolves conflicts.
 * [API reference](https://maximosnikiforakis.gr/syntactes/syntactes/).
