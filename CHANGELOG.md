@@ -1,6 +1,34 @@
 # Changelog
 
-## 0.6.1 - Unreleased
+## 0.8.0 - Unreleased
+
+### Added
+
+- The `bool` primitive (`Boolean`), and binary operation primitives that take
+  two operands: `add`, `sub`, `mul`, `div`, `pow` (`Addition`, `Subtraction`,
+  `Multiplication`, `Division`, `Exponentiation`) and `lt`, `le`, `gt`, `ge`,
+  `eq`, `ne` (`LowerThanComparison`, `LowerEqualThanComparison`,
+  `GreaterThanComparison`, `GreaterEqualThanComparison`, `EqualityComparison`,
+  `InequalityComparison`).
+
+- `syntactes.primitive.primitives()` returns every primitive.
+
+- The error for an unknown primitive in `Grammar.from_text` lists every valid
+  name.
+
+### Changed
+
+- Removes the `syntactes.ast` module. It shipped in 0.7.0 and 0.7.1, but was
+  never exported or documented.
+
+## 0.7.1 - 2026-10-08
+
+### Added
+
+- `syntactes.parser` exports the `Parser` base class of `LR0Parser`,
+  `SLRParser` and `LR1Parser`.
+
+## 0.7.0 - 2026-10-08
 
 ### Breaking changes
 

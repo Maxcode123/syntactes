@@ -3,7 +3,15 @@ import warnings
 from unittest_extensions import TestCase, args
 
 from syntactes import Grammar, GrammarError, GrammarWarning, Rule, Token
-from syntactes.primitive import Float, Integer, NoneType, String
+from syntactes.primitive import (
+    Addition,
+    Boolean,
+    EqualityComparison,
+    Float,
+    Integer,
+    NoneType,
+    String,
+)
 
 EOF = Token.eof()
 START = Token("<start>", False)
@@ -111,6 +119,18 @@ class TestFromTextPrimitives(TestCase):
     def test_none(self):
         self.assertResult([None, NoneType])
 
+    @args("bool % expr -> NUMBER\n")
+    def test_bool(self):
+        self.assertResult([None, Boolean])
+
+    @args("add % expr -> expr PLUS NUMBER\nexpr -> NUMBER\n")
+    def test_add(self):
+        self.assertResult([None, Addition, None])
+
+    @args("eq % expr -> NUMBER EQ NUMBER\n")
+    def test_eq(self):
+        self.assertResult([None, EqualityComparison])
+
     @args(EXPR_TEXT)
     def test_without_primitive(self):
         self.assertResult([None, None, None, None])
@@ -147,6 +167,9 @@ class TestFromTextRoundTrip(TestCase):
                 ("None % term -> ε", NoneType),
             ]
         )
+
+
+ALL = "int, float, str, None, bool, add, sub, mul, div, pow, lt, le, gt, ge, eq, ne"
 
 
 class TestFromTextErrors(TestCase):
@@ -207,17 +230,13 @@ class TestFromTextErrors(TestCase):
     def test_duplicate_empty_rule(self):
         self.assert_problems([(2, "duplicate of the rule on line 1")])
 
-    @args("bool % expr -> NUMBER\n")
+    @args("foo % expr -> NUMBER\n")
     def test_invalid_primitive(self):
-        self.assert_problems(
-            [(1, "invalid primitive bool expected one of int, str, float, None")]
-        )
+        self.assert_problems([(1, f"invalid primitive foo expected one of {ALL}")])
 
     @args("Integer % expr -> NUMBER\n")
     def test_primitive_class_name(self):
-        self.assert_problems(
-            [(1, "invalid primitive Integer expected one of int, str, float, None")]
-        )
+        self.assert_problems([(1, f"invalid primitive Integer expected one of {ALL}")])
 
     @args("% expr -> NUMBER\n")
     def test_percent_without_primitive(self):

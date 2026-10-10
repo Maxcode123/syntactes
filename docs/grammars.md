@@ -49,42 +49,69 @@ start, add, number = grammar.rules
 
 ### Primitives
 
-A rule can start with a primitive type and `%`: `int % expr -> NUMBER`. The
-primitive is one of `int`, `float`, `str` or `None`, and is stored on the rule
-as `rule.primitive`. Rules without one, the starting rule included, have
-`None`.
+A rule can start with a primitive and `%`: `int % expr -> NUMBER`. The
+primitive is stored on the rule as `rule.primitive`. Rules without one, the
+starting rule included, have `None`.
+
+`rule.primitive` is one of the classes in `syntactes.primitive`. There are two
+kinds. A value type converts one value when it's called:
+
+| Text    | Class      | Call                                        |
+| ------- | ---------- | ------------------------------------------- |
+| `int`   | `Integer`  | `Integer("42")` is `42`                     |
+| `float` | `Float`    | `Float("4.2")` is `4.2`                     |
+| `str`   | `String`   | `String(42)` is `"42"`                      |
+| `None`  | `NoneType` | `NoneType(x)` is always `None`              |
+| `bool`  | `Boolean`  | `True` for `"1"` or `"true"`, else `False`  |
+
+A binary operation takes two operands when it's called, and returns the
+result:
+
+| Text  | Class                        | Call returns     |
+| ----- | ---------------------------- | ---------------- |
+| `add` | `Addition`                   | `left + right`   |
+| `sub` | `Subtraction`                | `left - right`   |
+| `mul` | `Multiplication`             | `left * right`   |
+| `div` | `Division`                   | `left / right`   |
+| `pow` | `Exponentiation`             | `left ** right`  |
+| `lt`  | `LowerThanComparison`        | `left < right`   |
+| `le`  | `LowerEqualThanComparison`   | `left <= right`  |
+| `gt`  | `GreaterThanComparison`      | `left > right`   |
+| `ge`  | `GreaterEqualThanComparison` | `left >= right`  |
+| `eq`  | `EqualityComparison`         | `left == right`  |
+| `ne`  | `InequalityComparison`       | `left != right`  |
 
 ```python
 from syntactes import Grammar
-from syntactes.primitive import Integer
+from syntactes.primitive import Addition, Boolean, Integer, LowerThanComparison
 
 grammar = Grammar.from_text("""
 None % stmt -> PRINT expr
-int % expr -> expr PLUS NUMBER
-expr -> NUMBER
+bool % stmt -> TRUE
+add % expr -> expr PLUS NUMBER
+int % expr -> NUMBER
 """)
 
 for rule in grammar.rules:
     print(f"{rule.number}. {rule}")
 
-print([rule.primitive for rule in grammar.rules])
-print(repr(Integer("42")))
+print(repr(Integer("42")), repr(Boolean("true")))
+print(Addition(1, 2), LowerThanComparison(1, 2))
 ```
 
 ```
 0. <start> -> stmt $
 1. None % stmt -> PRINT expr
-2. int % expr -> expr PLUS NUMBER
-3. expr -> NUMBER
-[None, <class 'syntactes.primitive.NoneType'>, <class 'syntactes.primitive.Integer'>, None]
-42
+2. bool % stmt -> TRUE
+3. add % expr -> expr PLUS NUMBER
+4. int % expr -> NUMBER
+42 True
+3 True
 ```
 
-`rule.primitive` is one of the classes in `syntactes.primitive`: `Integer`,
-`Float`, `String` and `NoneType`. Calling one converts a value to its type, so
-`Integer("42")` is `42` and `NoneType(x)` is always `None`. Its `string()`
-method returns the name used in the text, which is also how `str(rule)` prints
-it.
+Every primitive's `string()` method returns the name used in the text, which is
+also how `str(rule)` prints it. `syntactes.primitive.primitives()` returns all
+of them, in the order of the tables above.
 
 The primitive isn't part of the rule's identity: two rules with the same
 symbols are equal whatever their primitives, so `int % expr -> NUMBER` and
@@ -108,7 +135,16 @@ except GrammarError as e:
 
 A line is an error if it has no `->`, an invalid name, a `$`, an `ε` next to
 other symbols, an unknown primitive, a `%` without a primitive before it, or
-repeats an earlier rule.
+repeats an earlier rule. The message for an unknown primitive lists the valid
+names:
+
+```python
+try:
+    Grammar.from_text("integer % expr -> NUMBER\n")
+except GrammarError as e:
+    print(e.problems)
+    # [(1, 'invalid primitive integer expected one of int, float, str, None, bool, add, sub, mul, div, pow, lt, le, gt, ge, eq, ne')]
+```
 
 ### Warnings
 
