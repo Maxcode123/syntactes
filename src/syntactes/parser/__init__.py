@@ -3,6 +3,7 @@
 from .exception import (
     NotAcceptedError as NotAcceptedError,
     ParserError as ParserError,
+    PrimitiveError as PrimitiveError,
     UnexpectedTokenError as UnexpectedTokenError,
 )
 from .parser import (

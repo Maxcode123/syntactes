@@ -1,15 +1,17 @@
 from unittest_extensions import TestCase, args
 
-from syntactes import Token
+from syntactes import Grammar, Rule, Token
 from syntactes._action import Action
 from syntactes.parser import (
     LR0Parser,
     LR1Parser,
     NotAcceptedError,
     ParserError,
+    PrimitiveError,
     SLRParser,
     UnexpectedTokenError,
 )
+from syntactes.primitive import Integer
 from syntactes.tests.data import (
     EOF,
     LPAREN,
@@ -330,14 +332,26 @@ class TestSLRParserValues(TestSLRParser):
         self.register_evaluator()
         self.assertResult(5)
 
-    @args(x1, EOF)
-    def test_without_callbacks_returns_none(self):
+    # E -> T + E has three symbols, so without callbacks its value is None.
+    @args(x1, PLUS, x2, EOF)
+    def test_without_callbacks_sum_returns_none(self):
         self.assertResultIs(None)
 
+    # E -> T and T -> x have one symbol each, so x1's value passes through.
     @args(x1, EOF)
+    def test_unit_rule_without_callback_passes_value(self):
+        self.parser().execute_on(rule_1_1)(lambda e: ("E", e.value))
+        self.assertResult(("E", 1))
+
+    # E -> T + E has three symbols and no callback.
+    @args(x1, PLUS, x2, EOF)
     def test_rule_without_callback_has_none_value(self):
         self.parser().execute_on(rule_1_1)(lambda e: ("E", e.value))
         self.assertResult(("E", None))
+
+    @args(x1, EOF)
+    def test_returns_start_symbol_value_without_callback(self):
+        self.assertResult(1)
 
     @args(x1, PLUS, x2, EOF)
     def test_starting_rule_receives_no_eof(self):
@@ -456,3 +470,156 @@ class TestParserEmptyRuleCallback(TestCase):
     @args(grammar_8, rule_3_8)
     def test_without_null_token(self):
         self.assertResult([()])
+
+
+NUMBER = Token("NUMBER", True)
+PLUS_ = Token("PLUS", True)
+MINUS = Token("MINUS", True)
+SLASH = Token("SLASH", True)
+EQ = Token("EQ", True)
+
+
+def number(value):
+    return Token("NUMBER", True, value)
+
+
+CALCULATOR = """
+add(1,3) % expr -> expr PLUS term
+sub(1,3) % expr -> expr MINUS term
+expr -> term
+int % term -> NUMBER
+"""
+
+
+class TestParserPrimitives(TestCase):
+    def setUp(self):
+        self.grammar = Grammar.from_text(CALCULATOR)
+        self.parser = LR1Parser.from_grammar(self.grammar)
+
+    def subject(self, *stream):
+        return self.parser.parse(stream)
+
+    @args(number("2"), PLUS_, number("3"), EOF)
+    def test_addition(self):
+        self.assertResult(5)
+
+    @args(number("7"), MINUS, number("2"), MINUS, number("1"), EOF)
+    def test_subtraction_is_left_associative(self):
+        self.assertResult(4)
+
+    @args(number("42"), EOF)
+    def test_value_type_and_pass_through(self):
+        self.assertResult(42)
+
+    @args(number("2"), PLUS_, number("3"), EOF)
+    def test_callback_wins_over_primitive(self):
+        add = self.grammar.rules[1]
+        self.parser.execute_on(add)(lambda l, _p, r: ("add", l.value, r.value))
+        self.assertResult(("add", 2, 3))
+
+    @args(number("x"), EOF)
+    def test_failure_raises_primitive_error(self):
+        self.assertResultRaises(PrimitiveError)
+
+    @args(number("x"), EOF)
+    def test_primitive_error_details(self):
+        with self.assertRaises(PrimitiveError) as context:
+            self.result()
+
+        error = context.exception
+        self.assertEqual(
+            (error.rule, error.primitive, type(error.__cause__)),
+            (self.grammar.rules[4], Integer, ValueError),
+        )
+
+    @args(number("x"), EOF)
+    def test_primitive_error_message_names_rule(self):
+        with self.assertRaises(PrimitiveError) as context:
+            self.result()
+
+        self.assertIn("term -> NUMBER", str(context.exception))
+
+    @args(number("x"), EOF)
+    def test_primitive_error_is_parser_error(self):
+        self.assertResultRaises(ParserError)
+
+
+class TestParserPrimitiveKinds(TestCase):
+    def subject(self, text, *stream):
+        return LR1Parser.from_grammar(Grammar.from_text(text)).parse(stream)
+
+    @args("float % v -> NUMBER\n", number("4.5"), EOF)
+    def test_float(self):
+        self.assertResult(4.5)
+
+    @args("str % v -> NUMBER\n", number(42), EOF)
+    def test_str(self):
+        self.assertResult("42")
+
+    @args("bool % v -> NUMBER\n", number("true"), EOF)
+    def test_bool(self):
+        self.assertResultIs(True)
+
+    @args("None % v -> NUMBER\n", number("1"), EOF)
+    def test_none(self):
+        self.assertResultIs(None)
+
+    @args("None % v -> NUMBER PLUS NUMBER\n", number(1), PLUS_, number(2), EOF)
+    def test_none_with_several_symbols(self):
+        self.assertResultIs(None)
+
+    @args("eq % v -> NUMBER EQ NUMBER\n", number(1), EQ, number(1), EOF)
+    def test_eq(self):
+        self.assertResultIs(True)
+
+    @args("sub(3,1) % v -> NUMBER MINUS NUMBER\n", number(7), MINUS, number(2), EOF)
+    def test_reversed_operands(self):
+        self.assertResult(-5)
+
+    @args("div % v -> NUMBER SLASH NUMBER\n", number(1), SLASH, number(0), EOF)
+    def test_division_by_zero(self):
+        with self.assertRaises(PrimitiveError) as context:
+            self.result()
+
+        self.assertIsInstance(context.exception.__cause__, ZeroDivisionError)
+
+    @args("v -> NUMBER PLUS NUMBER\n", number(1), PLUS_, number(2), EOF)
+    def test_rule_without_primitive_has_none_value(self):
+        self.assertResultIs(None)
+
+    @args("v -> w\nw -> NUMBER\n", number(7), EOF)
+    def test_unit_rules_pass_value(self):
+        self.assertResult(7)
+
+    @args("v -> items\nitems ->\n", EOF)
+    def test_empty_rule_has_none_value(self):
+        self.assertResultIs(None)
+
+
+START = Token("S", False)
+VALUE = Token("V", False)
+starting_rule = Rule(0, START, VALUE, EOF)
+value_rule = Rule(1, VALUE, NUMBER)
+starting_grammar = Grammar(
+    starting_rule,
+    (starting_rule, value_rule),
+    {START, VALUE, NUMBER, EOF},
+    primitives={starting_rule: Integer},
+)
+
+
+class TestParserStartingRulePrimitive(TestCase):
+    def setUp(self):
+        self.parser = LR1Parser.from_grammar(starting_grammar)
+
+    def subject(self, *stream):
+        return self.parser.parse(stream)
+
+    @args(number("5"), EOF)
+    def test_applied_on_accept(self):
+        self.assertResult(5)
+
+    @args(number("5"), EOF)
+    def test_callback_wins_on_accept(self):
+        self.parser.execute_on(starting_rule)(lambda v: ("start", v.value))
+        self.assertResult(("start", "5"))

@@ -14,6 +14,11 @@
   exactly one symbol, the one they convert. `int % expr -> expr PLUS NUMBER`
   is now an error. `None` can still tag any rule.
 
+- A rule without a callback no longer always pushes `None`. If it has a
+  primitive, the parser applies it, and if it has exactly one symbol, it passes
+  that symbol's value through. So `parse()` now returns the start symbol's
+  value when the starting rule has no callback, where it returned `None`.
+
 ### Added
 
 - The `bool` primitive (`Boolean`), and binary operation primitives that take
@@ -34,6 +39,10 @@
   `add(1,3) % expr -> expr PLUS expr`, and default to the first and last
   symbols. The positions are in `Grammar.operands`, which `Grammar` also takes
   as the keyword-only argument `operands`.
+
+- Parsers apply a rule's primitive on reduction when the rule has no callback,
+  and on accept for the starting rule. A failing primitive raises the new
+  `syntactes.parser.PrimitiveError`, a `ParserError`.
 
 - The error for an unknown primitive in `Grammar.from_text` lists every valid
   name.

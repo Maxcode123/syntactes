@@ -14,21 +14,20 @@ from syntactes._action import Action, ActionType
 from syntactes._state import LR0State
 from syntactes.parser import (
     NotAcceptedError,
+    PrimitiveError,
     UnexpectedTokenError,
 )
 from syntactes.parsing_table import ParsingTable
+from syntactes.primitive import NoneType, Primitive, _is_binary
 
 type Executable = Callable[..., object]
-
-
-def _do_nothing(*_: Token) -> None:
-    return None
 
 
 class Parser(ABC):
     """
     Base class of the LR parsers. Parses a stream of tokens with a parsing table,
-    and calls the callbacks registered with `execute_on` on each reduction.
+    and on each reduction computes the rule's value: with the callback registered
+    with `execute_on`, else with the rule's primitive from the grammar.
     """
 
     generator_cls: type
@@ -70,14 +69,25 @@ class Parser(ABC):
         """
         Parses the given stream of tokens. Expects the EOF token as the last one.
 
-        On each reduction the callback registered for the rule is called with one
-        token per right-hand side symbol, in order. Its return value becomes the
-        `value` of the token pushed for the left-hand side. A rule without a
-        callback pushes a token whose value is None.
+        On each reduction the rule's value becomes the `value` of the token
+        pushed for the left-hand side. The value is, in order of precedence:
 
-        On accept the starting rule's callback is called with its right-hand side
-        tokens except the trailing EOF, and its return value is returned. Without
-        a callback for the starting rule, returns None.
+        - what the callback registered for the rule returns, called with one
+          token per right-hand side symbol, in order;
+        - the result of the rule's primitive (`Grammar.primitives`): a binary
+          operation gets the values of the tokens at `Grammar.operands`, `None`
+          gives None, and any other primitive converts its single token's value;
+        - the value of the rule's token, if it has exactly one;
+        - None.
+
+        On accept the starting rule's value is computed the same way, from its
+        right-hand side tokens except the trailing EOF, and returned. So a
+        starting rule with neither a callback nor a primitive returns the start
+        symbol's value.
+
+        Raises `syntactes.parser.PrimitiveError` if a primitive raises, with the
+        original exception as its cause. Exceptions raised by callbacks
+        propagate unchanged.
 
         Raises `syntactes.parser.UnexpectedTokenError` if an unexpected token is
         received.
@@ -105,7 +115,7 @@ class Parser(ABC):
                 args = self._pop(tokens, rhs_len)
                 self._pop(states, rhs_len)
 
-                value = self._executable(rule)(*args)
+                value = self._value(rule, args)
 
                 tokens.append(Token(rule.lhs.symbol, False, value))
                 shift = self._get_action(states[-1], rule.lhs)
@@ -117,12 +127,40 @@ class Parser(ABC):
 
                 starting_rule = self._table.grammar.starting_rule
                 args = self._pop(tokens, starting_rule.rhs_len - 1)
-                return self._executable(starting_rule)(*args)
+                return self._value(starting_rule, args)
 
         raise NotAcceptedError("Expected EOF token. ")
 
-    def _executable(self, rule: Rule) -> Executable:
-        return self._executables.get(rule, _do_nothing)
+    def _value(self, rule: Rule, tokens: list[Token]) -> object:
+        """
+        Computes the value of `rule` from its right-hand side tokens: with its
+        callback, else its primitive, else its single token's value, else None.
+        """
+        executable = self._executables.get(rule)
+        if executable is not None:
+            return executable(*tokens)
+
+        primitive = self._table.grammar.primitives.get(rule)
+        if primitive is not None:
+            return self._apply(rule, primitive, tokens)
+
+        if len(tokens) == 1:
+            return tokens[0].value
+
+        return None
+
+    def _apply(self, rule: Rule, primitive: Primitive, tokens: list[Token]) -> object:
+        try:
+            if _is_binary(primitive):
+                left, right = self._table.grammar.operands[rule]
+                return primitive(tokens[left - 1].value, tokens[right - 1].value)
+
+            if primitive is NoneType:
+                return None
+
+            return primitive(tokens[0].value)
+        except Exception as e:
+            raise PrimitiveError(rule, primitive) from e
 
     @staticmethod
     def _pop[T](stack: list[T], count: int) -> list[T]:

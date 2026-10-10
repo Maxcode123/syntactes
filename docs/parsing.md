@@ -17,22 +17,31 @@ If you already have a table, pass it to the constructor instead:
 
 ## Callbacks
 
-On its own, a parser only checks that the tokens are valid. To compute
-something, register a callback for a rule with `@parser.execute_on(rule)`.
-Registering a rule that's not in the parser's grammar raises `ValueError`.
+On each reduction, the parser computes a value for the rule and pushes it as
+the `value` of the left-hand side token, so the rule that later uses that token
+receives it. The value comes from, in order:
 
-- On each reduction, the rule's callback is called with one token per
-  right-hand side symbol, in order.
-- The callback's return value becomes the `value` of the token pushed for the
-  left-hand side, so the callback of an enclosing rule receives it. A rule
-  without a callback pushes a token whose value is `None`.
+1. the rule's callback, if one is registered;
+2. the rule's [primitive](#primitives), if it has one;
+3. the value of the rule's only token, if it has exactly one, so unit rules
+   like `expr -> term` pass their value through;
+4. otherwise, `None`.
+
+When the parser accepts, it computes the starting rule's value the same way,
+from its right-hand side tokens except the trailing `$`, and `parse()` returns
+it. A starting rule with neither a callback nor a primitive returns the start
+symbol's value.
+
+To compute values yourself, register a callback for a rule with
+`@parser.execute_on(rule)`. Registering a rule that's not in the parser's
+grammar raises `ValueError`.
+
+- The callback is called with one token per right-hand side symbol, in order,
+  and its return value becomes the rule's value.
 - Terminals carry the `value` they were created with, such as
   `Token("x", True, 42)`.
 - An empty rule's callback is called with no arguments.
-- When the parser accepts, the starting rule's callback is called with its
-  right-hand side tokens, except the trailing `$`. Its return value is returned
-  by `parse()`. Without a callback for the starting rule, `parse()` returns
-  `None`.
+- A callback wins over the rule's primitive.
 - Exceptions raised in callbacks propagate out of `parse()` unchanged.
 
 `parse()` takes any iterable of tokens, a generator included, and expects `$`
@@ -119,6 +128,68 @@ Parsing stream: 1 + $
 ParserError: Received token: $; expected one of: ['x']
 ```
 
+## Primitives
+
+A rule's [primitive](grammars.md#primitives) computes its value when it has no
+callback, so a grammar can evaluate its input without any callbacks:
+
+- a binary operation, like `add(1,3)`, is called with the values of the tokens
+  at its [operand positions](grammars.md#operands);
+- a value type, like `int`, converts the value of the rule's single token;
+- `None` gives `None`.
+
+If a primitive raises, `parse()` raises a `PrimitiveError` naming the rule, with
+the original exception as its `__cause__`.
+
+```python
+from syntactes import Grammar, Token
+from syntactes.parser import LR1Parser, PrimitiveError
+
+grammar = Grammar.from_text("""
+add(1,3) % expr -> expr PLUS term
+sub(1,3) % expr -> expr MINUS term
+expr -> term
+mul(1,3) % term -> term TIMES factor
+term -> factor
+int % factor -> NUMBER
+factor -> LPAREN expr RPAREN
+""")
+parens = grammar.rules[-1]
+
+parser = LR1Parser.from_grammar(grammar)
+
+
+@parser.execute_on(parens)
+def parenthesized(lparen, expr, rparen):
+    # Three symbols and no primitive, so without a callback the value is None.
+    return expr.value
+
+
+KINDS = {"+": "PLUS", "-": "MINUS", "*": "TIMES", "(": "LPAREN", ")": "RPAREN"}
+
+
+def lex(text):
+    for word in text.split():
+        yield Token(KINDS.get(word, "NUMBER"), True, word)
+    yield Token.eof()
+
+
+print(parser.parse(lex("2 * ( 7 - 2 - 1 ) + 3")))
+
+try:
+    parser.parse(lex("2 + x"))
+except PrimitiveError as e:
+    print(f"{e} ({e.__cause__!r})")
+```
+
+```
+11
+Primitive int of rule 'factor -> NUMBER' failed. (ValueError("invalid literal for int() with base 10: 'x'"))
+```
+
+`factor -> LPAREN expr RPAREN` has three symbols and no primitive, so it needs
+a callback to keep the value of `expr`.
+
 ## Errors
 
 `parse()` raises a `ParserError` from `syntactes.parser`:
@@ -129,6 +200,8 @@ ParserError: Received token: $; expected one of: ['x']
   accepted, sorted.
 - `NotAcceptedError` if the stream ends before the parser accepts, for example
   when the `$` is missing.
+- `PrimitiveError` if a rule's [primitive](#primitives) raises. Its `rule` and
+  `primitive` say which, and its `__cause__` is the original exception.
 
 ## Conflicts
 
