@@ -6,7 +6,9 @@ There are value types (`Integer`, `Float`, `String`, `NoneType`, `Boolean`),
 whose call converts one value, and binary operations (`Addition`,
 `EqualityComparison` and the rest), whose call takes two operands and
 returns the result. Every primitive's `string()` is the name used in the
-grammar text.
+grammar text. A binary operation can say which right-hand side symbols are its
+operands, as in `add(1,3) % expr -> expr PLUS expr`; they're kept in
+`Grammar.operands`.
 """
 
 from typing import Protocol, Self
@@ -335,3 +337,22 @@ class InequalityComparison[T]:
         Returns the primitive's name in the grammar text.
         """
         return "ne"
+
+
+_BINARY: tuple[Primitive, ...] = (
+    Addition,
+    Subtraction,
+    Multiplication,
+    Division,
+    Exponentiation,
+    LowerThanComparison,
+    LowerEqualThanComparison,
+    GreaterThanComparison,
+    GreaterEqualThanComparison,
+    EqualityComparison,
+    InequalityComparison,
+)
+
+
+def _is_binary(primitive: Primitive) -> bool:
+    return primitive in _BINARY

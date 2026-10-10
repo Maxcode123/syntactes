@@ -13,12 +13,17 @@ from dataclasses import dataclass, field
 from syntactes import Rule, Token
 from syntactes.primitive import (
     Primitive,
+    _is_binary,
     primitives,
 )
 
 START_SYMBOL = "<start>"
 
 _NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+# A primitive's name, optionally followed by parentheses, as in add(1,3). Only
+# binary operations take them, and they must hold two operand positions.
+_PRIMITIVE = re.compile(r"(\w+)\s*(?:\((.*)\))?")
+_OPERANDS = re.compile(r"\s*(\d+)\s*,\s*(\d+)\s*")
 _ARROW = "->"
 _PERCENT = "%"
 
@@ -27,6 +32,7 @@ _PERCENT = "%"
 class _Line:
     number: int
     primitive: str | None
+    operands: tuple[int, int] | None
     lhs: str
     rhs: list[str]
 
@@ -35,6 +41,7 @@ class _Line:
 class ParsedText:
     rules: list[Rule] = field(default_factory=list)
     primitives: dict[Rule, Primitive] = field(default_factory=dict)
+    operands: dict[Rule, tuple[int, int]] = field(default_factory=dict)
     errors: list[tuple[int | None, str]] = field(default_factory=list)
     warnings: list[tuple[int, str]] = field(default_factory=list)
 
@@ -77,6 +84,9 @@ def parse(text: str) -> ParsedText:
         if prim is not None:
             result.primitives[rule] = prim
 
+        if line.operands is not None:
+            result.operands[rule] = line.operands
+
     result.warnings = _warnings(lines, result.rules[1:], start)
     return result
 
@@ -117,7 +127,8 @@ def _lines(text: str, errors: list[tuple[int | None, str]]) -> list[_Line]:
             continue
 
         seen[key] = number
-        lines.append(_Line(number, primitive, lhs, rhs))
+        name, operands = _split_primitive(primitive) if primitive else (None, None)
+        lines.append(_Line(number, name, operands, lhs, rhs))
 
     return lines
 
@@ -137,9 +148,10 @@ def _line_error(
     if primitive and not lhs:
         return f"expected 'primitive {_PERCENT} lhs {_ARROW} symbols'"
 
-    names = [p.string() for p in primitives()]
-    if primitive and primitive not in names:
-        return f"invalid primitive {primitive} expected one of {', '.join(names)}"
+    if primitive:
+        error = _primitive_error(primitive, rhs)
+        if error is not None:
+            return error
 
     if percent and not primitive:
         return f"expected 'primitive {_PERCENT} lhs {_ARROW} symbols'"
@@ -156,6 +168,64 @@ def _line_error(
 
         if not _NAME.fullmatch(symbol):
             return f"invalid symbol {symbol!r}"
+
+    return None
+
+
+def _split_primitive(raw: str) -> tuple[str, tuple[int, int] | None]:
+    """
+    Split a primitive that `_primitive_error` accepted into its name and operand
+    positions.
+    """
+    match = _PRIMITIVE.fullmatch(raw)
+    if match is None:
+        raise ValueError(f"invalid primitive {raw!r}")
+
+    name, inside = match.groups()
+    if inside is None:
+        return name, None
+
+    operands = _OPERANDS.fullmatch(inside)
+    if operands is None:
+        raise ValueError(f"invalid primitive {raw!r}")
+
+    left, right = operands.groups()
+    return name, (int(left), int(right))
+
+
+def _primitive_error(raw: str, rhs: list[str]) -> str | None:
+    invalid = f"invalid primitive {raw!r} expected name or name(i,j)"
+    match = _PRIMITIVE.fullmatch(raw)
+    if match is None:
+        return invalid
+
+    name, inside = match.groups()
+    by_name = {p.string(): p for p in primitives()}
+    if name not in by_name:
+        return f"invalid primitive {name} expected one of {', '.join(by_name)}"
+
+    if not _is_binary(by_name[name]):
+        if inside is not None:
+            return f"{name} takes no operand positions"
+        return None
+
+    if inside is not None and _OPERANDS.fullmatch(inside) is None:
+        return invalid
+
+    _, operands = _split_primitive(raw)
+    count = 0 if rhs == [Token.null().symbol] else len(rhs)
+    if count < 2:
+        return f"{name} needs at least 2 symbols"
+
+    if operands is None:
+        return None
+
+    for position in operands:
+        if not 1 <= position <= count:
+            return f"operand position {position} is out of range 1-{count}"
+
+    if operands[0] == operands[1]:
+        return "operand positions must differ"
 
     return None
 

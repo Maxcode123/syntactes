@@ -119,6 +119,37 @@ print it.
 Rules are compared by their symbols, so `int % expr -> NUMBER` and
 `float % expr -> NUMBER` in the same grammar are duplicates.
 
+#### Operands
+
+A binary operation can say which right-hand side symbols are its operands, by
+their 1-based positions: `add(1,3) % expr -> expr PLUS expr` adds the first and
+third symbols. The order counts, so `sub(4,2)` is the fourth symbol minus the
+second. Without positions, the operands are the first and last symbols. The
+positions are stored in `grammar.operands`, a read-only mapping that holds every
+rule whose primitive is a binary operation, and no other rule.
+
+```python
+grammar = Grammar.from_text("""
+add(1,3) % expr -> expr PLUS expr
+sub(4,2) % expr -> SUBTRACT expr FROM expr
+mul % expr -> expr TIMES expr
+expr -> NUMBER
+""")
+
+for rule, (left, right) in grammar.operands.items():
+    print(f"{rule}  [{grammar.primitives[rule].__name__} ${left} ${right}]")
+```
+
+```
+expr -> expr PLUS expr  [Addition $1 $3]
+expr -> SUBTRACT expr FROM expr  [Subtraction $4 $2]
+expr -> expr TIMES expr  [Multiplication $1 $3]
+```
+
+A binary operation's rule needs at least 2 symbols, and its two positions must
+be different and between 1 and the number of symbols. Value types don't take
+positions.
+
 ### Errors
 
 `from_text` reports every problem at once. It raises a `GrammarError`, whose
@@ -136,9 +167,9 @@ except GrammarError as e:
 ```
 
 A line is an error if it has no `->`, an invalid name, a `$`, an `ε` next to
-other symbols, an unknown primitive, a `%` without a primitive before it, or
-repeats an earlier rule. The message for an unknown primitive lists the valid
-names:
+other symbols, an unknown primitive, a `%` without a primitive before it,
+[operand positions](#operands) that aren't valid, or repeats an earlier rule.
+The message for an unknown primitive lists the valid names:
 
 ```python
 try:
@@ -146,6 +177,12 @@ try:
 except GrammarError as e:
     print(e.problems)
     # [(1, 'invalid primitive integer expected one of int, float, str, None, bool, add, sub, mul, div, pow, lt, le, gt, ge, eq, ne')]
+
+try:
+    Grammar.from_text("add(1,4) % expr -> expr PLUS expr\nint(1) % expr -> NUMBER\n")
+except GrammarError as e:
+    print(e.problems)
+    # [(1, 'operand position 4 is out of range 1-3'), (2, 'int takes no operand positions')]
 ```
 
 ### Warnings
@@ -218,6 +255,10 @@ To give rules primitives, pass `Grammar` a mapping from rules to
 matched by its symbols, not its number. The mapping is copied, and
 `grammar.primitives` is read-only.
 
+Operand positions go in the keyword argument `operands`, a mapping from rules
+to `(left, right)` pairs, as in `operands={rule_2: (1, 3)}`. A binary
+operation without an entry gets its first and last symbols.
+
 Tokens are compared by their symbol and whether they're terminal. A token can
 also carry a `value`, which equality and hashing ignore, so `Token("x", True, 1)`
 and `Token("x", True)` are the same symbol. The [parser](parsing.md) uses that
@@ -234,7 +275,11 @@ value to pass data to your callbacks.
 - a non-terminal has no rules;
 - two rules have the same number;
 - a primitive is given for a rule that's not in the rules, or isn't one of
-  `syntactes.primitive.primitives()`.
+  `syntactes.primitive.primitives()`;
+- operands are given for a rule that's not in the rules, or whose primitive
+  isn't a binary operation;
+- a binary operation's rule has fewer than 2 symbols, or its operand positions
+  are equal or out of range.
 
 It stops at the first problem, and `problems` holds its message as
 `[(None, message)]`.

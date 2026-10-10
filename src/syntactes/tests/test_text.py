@@ -149,6 +149,47 @@ class TestFromTextPrimitivesMap(TestCase):
     def test_empty_rule(self):
         self.assertResult({Rule(2, items): NoneType})
 
+    @args("add(1,3) % expr -> expr PLUS expr\nexpr -> NUMBER\n")
+    def test_add_with_positions(self):
+        self.assertResult({Rule(1, expr, expr, PLUS, expr): Addition})
+
+
+class TestFromTextOperands(TestCase):
+    def subject(self, text):
+        return dict(Grammar.from_text(text).operands)
+
+    @args("add(1,3) % expr -> expr PLUS expr\nexpr -> NUMBER\n")
+    def test_positions(self):
+        self.assertResult({Rule(1, expr, expr, PLUS, expr): (1, 3)})
+
+    @args("sub(3,1) % expr -> expr PLUS expr\nexpr -> NUMBER\n")
+    def test_order_kept(self):
+        self.assertResult({Rule(1, expr, expr, PLUS, expr): (3, 1)})
+
+    @args("add( 1 , 3 ) % expr -> expr PLUS expr\nexpr -> NUMBER\n")
+    def test_whitespace_inside_parentheses(self):
+        self.assertResult({Rule(1, expr, expr, PLUS, expr): (1, 3)})
+
+    @args("add(1,3)%expr->expr PLUS expr\nexpr -> NUMBER\n")
+    def test_no_whitespace(self):
+        self.assertResult({Rule(1, expr, expr, PLUS, expr): (1, 3)})
+
+    @args("add % expr -> expr PLUS expr\nexpr -> NUMBER\n")
+    def test_default_first_and_last(self):
+        self.assertResult({Rule(1, expr, expr, PLUS, expr): (1, 3)})
+
+    @args("eq % expr -> NUMBER NUMBER\n")
+    def test_default_two_symbols(self):
+        self.assertResult({Rule(1, expr, NUMBER, NUMBER): (1, 2)})
+
+    @args("int % expr -> NUMBER\n")
+    def test_value_type_absent(self):
+        self.assertResult({})
+
+    @args(EXPR_TEXT)
+    def test_without_primitive(self):
+        self.assertResult({})
+
 
 class TestFromTextRoundTrip(TestCase):
     def subject(self, text):
@@ -255,6 +296,56 @@ class TestFromTextErrors(TestCase):
     @args("int % expr -> NUMBER\nfloat % expr -> NUMBER\n")
     def test_duplicate_rule_with_other_primitive(self):
         self.assert_problems([(2, "duplicate of the rule on line 1")])
+
+    @args("add(1) % expr -> expr PLUS expr\n")
+    def test_one_operand_position(self):
+        self.assert_problems(
+            [(1, "invalid primitive 'add(1)' expected name or name(i,j)")]
+        )
+
+    @args("add() % expr -> expr PLUS expr\n")
+    def test_no_operand_positions(self):
+        self.assert_problems(
+            [(1, "invalid primitive 'add()' expected name or name(i,j)")]
+        )
+
+    @args("add(1,2,3) % expr -> expr PLUS expr\n")
+    def test_three_operand_positions(self):
+        self.assert_problems(
+            [(1, "invalid primitive 'add(1,2,3)' expected name or name(i,j)")]
+        )
+
+    @args("foo(1,3) % expr -> expr PLUS expr\n")
+    def test_unknown_primitive_with_positions(self):
+        self.assert_problems([(1, f"invalid primitive foo expected one of {ALL}")])
+
+    @args("int(1) % expr -> NUMBER\n")
+    def test_value_type_with_positions(self):
+        self.assert_problems([(1, "int takes no operand positions")])
+
+    @args("add % expr -> NUMBER\n")
+    def test_binary_with_one_symbol(self):
+        self.assert_problems([(1, "add needs at least 2 symbols")])
+
+    @args("add % expr ->\n")
+    def test_binary_empty_rule(self):
+        self.assert_problems([(1, "add needs at least 2 symbols")])
+
+    @args("add % expr -> ε\n")
+    def test_binary_null_rule(self):
+        self.assert_problems([(1, "add needs at least 2 symbols")])
+
+    @args("add(1,4) % expr -> expr PLUS expr\n")
+    def test_operand_position_too_high(self):
+        self.assert_problems([(1, "operand position 4 is out of range 1-3")])
+
+    @args("add(0,3) % expr -> expr PLUS expr\n")
+    def test_operand_position_zero(self):
+        self.assert_problems([(1, "operand position 0 is out of range 1-3")])
+
+    @args("add(2,2) % expr -> expr PLUS expr\n")
+    def test_equal_operand_positions(self):
+        self.assert_problems([(1, "operand positions must differ")])
 
     @args("expr NUMBER\nexpr -> NUMBER\n9 -> x\nexpr -> $\n")
     def test_all_problems_reported(self):

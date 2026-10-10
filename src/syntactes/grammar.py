@@ -4,7 +4,7 @@ from types import MappingProxyType
 from typing import Self
 
 from syntactes import Rule, Token, _text
-from syntactes.primitive import Primitive, primitives
+from syntactes.primitive import Primitive, _is_binary, primitives
 
 
 class GrammarError(ValueError):
@@ -58,6 +58,7 @@ class Grammar:
         tokens: set[Token],
         *,
         primitives: Mapping[Rule, Primitive] | None = None,
+        operands: Mapping[Rule, tuple[int, int]] | None = None,
     ) -> None:
         """
         `starting_rule` should also be included in `rules`, and end with the EOF
@@ -66,12 +67,18 @@ class Grammar:
         `primitives` maps some of the rules to a primitive from
         `syntactes.primitive`. A rule is matched by its symbols, not its number.
 
+        `operands` maps rules whose primitive is a binary operation to the
+        1-based positions of their two operands among the right-hand side
+        symbols, e.g. `(1, 3)` for `expr -> expr PLUS expr`. A binary operation
+        without an entry gets its first and last symbols.
+
         Raises `GrammarError` if the grammar is malformed.
         """
         self.starting_rule = starting_rule
         self.rules = tuple(rules)
         self.tokens = tokens
         self._primitives = dict(primitives or {})
+        self._operands = dict(operands or {})
 
         self._validate()
 
@@ -84,6 +91,15 @@ class Grammar:
         # Stored as a dict and wrapped on access, because a mappingproxy can't
         # be pickled or deep-copied.
         return MappingProxyType(self._primitives)
+
+    @property
+    def operands(self) -> Mapping[Rule, tuple[int, int]]:
+        """
+        The 1-based positions of the two operands of each rule whose primitive is
+        a binary operation, e.g. `(1, 3)` for `add(1,3) % expr -> expr PLUS expr`.
+        Every such rule is in it, and no other. It's read-only.
+        """
+        return MappingProxyType(self._operands)
 
     @classmethod
     def from_text(cls, text: str) -> Self:
@@ -99,7 +115,9 @@ class Grammar:
         Blank lines and lines starting with `#` are ignored.
 
         A rule can start with a primitive and `%`, as in
-        `int % expr -> NUMBER`. It's stored in `primitives`.
+        `int % expr -> NUMBER`. It's stored in `primitives`. A binary operation
+        can name its operands' positions, as in `add(1,3) % expr -> expr PLUS
+        expr`, which are stored in `operands`.
 
         The first rule's left-hand side is the start symbol: the starting rule
         `<start> -> expr $` is added as rule 0, and the rules of the text are
@@ -121,7 +139,13 @@ class Grammar:
             tokens.add(rule.lhs)
             tokens.update(rule.rhs)
 
-        return cls(parsed.rules[0], parsed.rules, tokens, primitives=parsed.primitives)
+        return cls(
+            parsed.rules[0],
+            parsed.rules,
+            tokens,
+            primitives=parsed.primitives,
+            operands=parsed.operands,
+        )
 
     def terminals(self) -> set[Token]:
         """
@@ -184,3 +208,38 @@ class Grammar:
                     f"Primitive {primitive!r} of rule '{rule}' is not one of "
                     "syntactes.primitive.primitives()."
                 )
+
+        for rule in self._operands:
+            if rule not in self.rules:
+                raise GrammarError(
+                    f"Operands given for rule '{rule}', which is not in the rules."
+                )
+
+            primitive = self._primitives.get(rule)
+            if primitive is None or not _is_binary(primitive):
+                raise GrammarError(
+                    f"Operands given for rule '{rule}', whose primitive isn't a "
+                    "binary operation."
+                )
+
+        for rule, primitive in self._primitives.items():
+            if not _is_binary(primitive):
+                continue
+
+            count = 0 if rule.is_empty() else rule.rhs_len
+            if count < 2:
+                raise GrammarError(
+                    f"Rule '{rule}' needs at least 2 symbols for its primitive "
+                    f"{primitive.string()}."
+                )
+
+            left, right = self._operands.setdefault(rule, (1, count))
+            for position in (left, right):
+                if not 1 <= position <= count:
+                    raise GrammarError(
+                        f"Operand position {position} of rule '{rule}' is out of "
+                        f"range 1-{count}."
+                    )
+
+            if left == right:
+                raise GrammarError(f"Operand positions of rule '{rule}' must differ.")

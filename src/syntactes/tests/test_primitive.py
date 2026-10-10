@@ -17,6 +17,7 @@ from syntactes.primitive import (
     NoneType,
     String,
     Subtraction,
+    _is_binary,
     primitives,
 )
 
@@ -260,3 +261,46 @@ class TestPrimitives(TestCase):
 
     def test_returns_a_tuple(self):
         self.assertIsInstance(self.result(), tuple)
+
+
+class TestIsBinary(TestCase):
+    def subject(self, primitive):
+        return _is_binary(primitive)
+
+    @args(Integer)
+    def test_integer(self):
+        self.assertResultFalse()
+
+    @args(Float)
+    def test_float(self):
+        self.assertResultFalse()
+
+    @args(String)
+    def test_string(self):
+        self.assertResultFalse()
+
+    @args(NoneType)
+    def test_none_type(self):
+        self.assertResultFalse()
+
+    @args(Boolean)
+    def test_boolean(self):
+        self.assertResultFalse()
+
+    def test_every_operation(self):
+        operations = [
+            Addition,
+            Subtraction,
+            Multiplication,
+            Division,
+            Exponentiation,
+            LowerThanComparison,
+            LowerEqualThanComparison,
+            GreaterThanComparison,
+            GreaterEqualThanComparison,
+            EqualityComparison,
+            InequalityComparison,
+        ]
+        for operation in operations:
+            with self.subTest(operation=operation):
+                self.assertTrue(_is_binary(operation))

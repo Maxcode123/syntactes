@@ -26,6 +26,11 @@
   `GrammarError` for a rule that's not in the grammar or a value that isn't a
   primitive. `Grammar.from_text` fills it from `int % expr -> NUMBER` lines.
 
+- Binary operations can name their operands by 1-based position, as in
+  `add(1,3) % expr -> expr PLUS expr`, and default to the first and last
+  symbols. The positions are in `Grammar.operands`, which `Grammar` also takes
+  as the keyword-only argument `operands`.
+
 - The error for an unknown primitive in `Grammar.from_text` lists every valid
   name.
 

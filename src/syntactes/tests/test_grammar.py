@@ -4,7 +4,7 @@ import pickle
 from unittest_extensions import TestCase, args
 
 from syntactes import Grammar, GrammarError, Rule
-from syntactes.primitive import Addition, Integer, NoneType
+from syntactes.primitive import Addition, Integer, NoneType, Subtraction
 from syntactes.tests import data
 from syntactes.tests.data import EOF, NULL, PLUS, A, E, S, T, a, x
 
@@ -139,6 +139,88 @@ class TestGrammarPrimitives(TestCase):
     def test_deepcopy_still_read_only(self):
         with self.assertRaises(TypeError):
             copy.deepcopy(self.result()).primitives[valid_rules[1]] = Addition
+
+
+sum_rule = valid_rules[1]
+x_rule = valid_rules[2]
+
+
+class TestGrammarOperands(TestCase):
+    def subject(self, primitives, operands):
+        return Grammar(
+            valid_rules[0],
+            valid_rules,
+            valid_tokens,
+            primitives=primitives,
+            operands=operands,
+        )
+
+    @args(None, None)
+    def test_empty_by_default(self):
+        self.assertEqual(dict(self.result().operands), {})
+
+    @args({sum_rule: Addition}, {sum_rule: (1, 3)})
+    def test_stored(self):
+        self.assertEqual(dict(self.result().operands), {sum_rule: (1, 3)})
+
+    @args({sum_rule: Subtraction}, {sum_rule: (3, 1)})
+    def test_order_kept(self):
+        self.assertEqual(dict(self.result().operands), {sum_rule: (3, 1)})
+
+    @args({sum_rule: Addition}, None)
+    def test_default_first_and_last(self):
+        self.assertEqual(dict(self.result().operands), {sum_rule: (1, 3)})
+
+    @args({x_rule: Integer}, None)
+    def test_value_type_absent(self):
+        self.assertEqual(dict(self.result().operands), {})
+
+    @args({sum_rule: Addition}, {Rule(99, E, T, PLUS, E): (1, 3)})
+    def test_rule_matched_by_symbols(self):
+        self.assertEqual(dict(self.result().operands), {sum_rule: (1, 3)})
+
+    @args({sum_rule: Addition}, {sum_rule: (1, 3)})
+    def test_read_only(self):
+        with self.assertRaises(TypeError):
+            self.result().operands[sum_rule] = (3, 1)
+
+    @args({sum_rule: Addition}, {sum_rule: (1, 3)})
+    def test_pickle_round_trip(self):
+        grammar = pickle.loads(pickle.dumps(self.result()))
+        self.assertEqual(dict(grammar.operands), {sum_rule: (1, 3)})
+
+    @args({sum_rule: Addition}, {sum_rule: (1, 3)})
+    def test_deepcopy(self):
+        grammar = copy.deepcopy(self.result())
+        self.assertEqual(dict(grammar.operands), {sum_rule: (1, 3)})
+
+    @args({sum_rule: Addition}, {Rule(9, E, T, T): (1, 2)})
+    def test_rule_not_in_rules(self):
+        self.assertResultRaises(GrammarError)
+
+    @args(None, {sum_rule: (1, 3)})
+    def test_rule_without_primitive(self):
+        self.assertResultRaises(GrammarError)
+
+    @args({sum_rule: Integer}, {sum_rule: (1, 3)})
+    def test_value_type_rule(self):
+        self.assertResultRaises(GrammarError)
+
+    @args({sum_rule: Addition}, {sum_rule: (1, 4)})
+    def test_position_too_high(self):
+        self.assertResultRaises(GrammarError)
+
+    @args({sum_rule: Addition}, {sum_rule: (0, 3)})
+    def test_position_zero(self):
+        self.assertResultRaises(GrammarError)
+
+    @args({sum_rule: Addition}, {sum_rule: (2, 2)})
+    def test_equal_positions(self):
+        self.assertResultRaises(GrammarError)
+
+    @args({x_rule: Addition}, None)
+    def test_binary_with_one_symbol(self):
+        self.assertResultRaises(GrammarError)
 
 
 class TestGrammarErrorIsValueError(TestCase):
