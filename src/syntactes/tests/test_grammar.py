@@ -9,9 +9,9 @@ from syntactes.tests import data
 from syntactes.tests.data import EOF, NULL, PLUS, A, E, S, T, a, x
 
 valid_rules = (
-    Rule(0, None, S, E, EOF),
-    Rule(1, None, E, T, PLUS, E),
-    Rule(2, None, T, x),
+    Rule(0, S, E, EOF),
+    Rule(1, E, T, PLUS, E),
+    Rule(2, T, x),
 )
 valid_tokens = {EOF, S, E, T, x, PLUS}
 
@@ -31,39 +31,39 @@ class TestGrammar(TestCase):
     def test_rules_iterable_stored_as_tuple(self):
         self.assertEqual(self.result().rules, valid_rules)
 
-    @args(Rule(0, None, S, E, EOF), valid_rules[1:], valid_tokens)
+    @args(Rule(0, S, E, EOF), valid_rules[1:], valid_tokens)
     def test_starting_rule_not_in_rules(self):
         self.assert_grammar_error()
 
-    @args(Rule(0, None, S, E), (Rule(0, None, S, E), *valid_rules[1:]), valid_tokens)
+    @args(Rule(0, S, E), (Rule(0, S, E), *valid_rules[1:]), valid_tokens)
     def test_starting_rule_without_eof(self):
         self.assert_grammar_error()
 
     @args(
-        Rule(0, None, S, E, EOF, EOF),
-        (Rule(0, None, S, E, EOF, EOF), *valid_rules[1:]),
+        Rule(0, S, E, EOF, EOF),
+        (Rule(0, S, E, EOF, EOF), *valid_rules[1:]),
         valid_tokens,
     )
     def test_eof_twice_in_starting_rule(self):
         self.assert_grammar_error()
 
-    @args(valid_rules[0], (*valid_rules, Rule(3, None, T, x, EOF)), valid_tokens)
+    @args(valid_rules[0], (*valid_rules, Rule(3, T, x, EOF)), valid_tokens)
     def test_eof_in_other_rule(self):
         self.assert_grammar_error()
 
-    @args(valid_rules[0], (*valid_rules, Rule(3, None, x, T)), valid_tokens)
+    @args(valid_rules[0], (*valid_rules, Rule(3, x, T)), valid_tokens)
     def test_terminal_lhs(self):
         self.assert_grammar_error()
 
-    @args(valid_rules[0], (*valid_rules, Rule(3, None, T, a)), valid_tokens)
+    @args(valid_rules[0], (*valid_rules, Rule(3, T, a)), valid_tokens)
     def test_undeclared_rhs_symbol(self):
         self.assert_grammar_error()
 
-    @args(valid_rules[0], (*valid_rules, Rule(3, None, A, x)), valid_tokens | {T})
+    @args(valid_rules[0], (*valid_rules, Rule(3, A, x)), valid_tokens | {T})
     def test_undeclared_lhs_symbol(self):
         self.assert_grammar_error()
 
-    @args(valid_rules[0], (*valid_rules, Rule(3, None, T, NULL)), valid_tokens)
+    @args(valid_rules[0], (*valid_rules, Rule(3, T, NULL)), valid_tokens)
     def test_undeclared_null_allowed(self):
         self.assertResultIsInstance(Grammar)
 
@@ -71,7 +71,7 @@ class TestGrammar(TestCase):
     def test_non_terminal_without_rules(self):
         self.assert_grammar_error()
 
-    @args(valid_rules[0], (*valid_rules, Rule(2, None, T, PLUS)), valid_tokens)
+    @args(valid_rules[0], (*valid_rules, Rule(2, T, PLUS)), valid_tokens)
     def test_duplicate_rule_numbers(self):
         self.assert_grammar_error()
 
@@ -101,11 +101,11 @@ class TestGrammarPrimitives(TestCase):
         with self.assertRaises(TypeError):
             self.result().primitives[valid_rules[1]] = Addition
 
-    @args({Rule(3, None, T, PLUS): Integer})
+    @args({Rule(3, T, PLUS): Integer})
     def test_rule_not_in_rules(self):
         self.assertResultRaises(GrammarError)
 
-    @args({Rule(99, None, T, x): Integer})
+    @args({Rule(99, T, x): Integer})
     def test_rule_matched_by_symbols(self):
         self.assertEqual(dict(self.result().primitives), {valid_rules[2]: Integer})
 

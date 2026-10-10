@@ -93,30 +93,30 @@ int % expr -> NUMBER
 """)
 
 for rule in grammar.rules:
-    print(f"{rule.number}. {rule}")
+    primitive = grammar.primitives.get(rule)
+    name = primitive.__name__ if primitive else "-"
+    print(f"{rule.number}. {rule}  [{name}]")
 
-print(grammar.primitives[grammar.rules[3]], grammar.primitives.get(grammar.rules[0]))
 print(repr(Integer("42")), repr(Boolean("true")))
 print(Addition(1, 2), LowerThanComparison(1, 2))
 ```
 
 ```
-0. <start> -> stmt $
-1. None % stmt -> PRINT expr
-2. bool % stmt -> TRUE
-3. add % expr -> expr PLUS NUMBER
-4. int % expr -> NUMBER
-<class 'syntactes.primitive.Addition'> None
+0. <start> -> stmt $  [-]
+1. stmt -> PRINT expr  [NoneType]
+2. stmt -> TRUE  [Boolean]
+3. expr -> expr PLUS NUMBER  [Addition]
+4. expr -> NUMBER  [Integer]
 42 True
 3 True
 ```
 
-Every primitive's `string()` method returns the name used in the text, which is
-also how `str(rule)` prints it. `syntactes.primitive.primitives()` returns all
-of them, in the order of the tables above.
+Every primitive's `string()` method returns the name used in the text.
+`syntactes.primitive.primitives()` returns all of them, in the order of the
+tables above. The primitive isn't part of the rule, so `str(rule)` doesn't
+print it.
 
-The primitive isn't part of the rule's identity: two rules with the same
-symbols are equal whatever their primitives, so `int % expr -> NUMBER` and
+Rules are compared by their symbols, so `int % expr -> NUMBER` and
 `float % expr -> NUMBER` in the same grammar are duplicates.
 
 ### Errors
@@ -179,8 +179,7 @@ for warning in caught:
 A `Token` is a symbol, and is either a terminal or a non-terminal. `Token.eof()`
 is the end of the input (`$`), and `Token.null()` is the empty string (`ε`).
 
-A `Rule` takes a number, its [primitive](#primitives) (or `None`), its
-left-hand side and its right-hand side symbols.
+A `Rule` takes a number, its left-hand side and its right-hand side symbols.
 A `Grammar` takes the starting rule, every rule (the starting rule included)
 and the set of tokens.
 
@@ -200,18 +199,18 @@ tokens = {EOF, S, E, T, x, PLUS}
 # 1. E -> T + E
 # 2. E -> T
 # 3. T -> x
-rule_1 = Rule(0, None, S, E, EOF)
-rule_2 = Rule(1, None, E, T, PLUS, E)
-rule_3 = Rule(2, None, E, T)
-rule_4 = Rule(3, None, T, x)
+rule_1 = Rule(0, S, E, EOF)
+rule_2 = Rule(1, E, T, PLUS, E)
+rule_3 = Rule(2, E, T)
+rule_4 = Rule(3, T, x)
 
 rules = (rule_1, rule_2, rule_3, rule_4)
 
 grammar = Grammar(rule_1, rules, tokens)
 ```
 
-An empty rule can be written as `Rule(n, None, A)` or
-`Rule(n, None, A, Token.null())`.
+An empty rule can be written as `Rule(n, A)` or
+`Rule(n, A, Token.null())`.
 
 To give rules primitives, pass `Grammar` a mapping from rules to
 `syntactes.primitive` classes as the keyword argument `primitives`, as in

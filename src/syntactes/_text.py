@@ -69,10 +69,10 @@ def parse(text: str) -> ParsedText:
         return None
 
     start = Token(lines[0].lhs, False)
-    result.rules.append(Rule(0, None, Token(START_SYMBOL, False), start, Token.eof()))
+    result.rules.append(Rule(0, Token(START_SYMBOL, False), start, Token.eof()))
     for number, line in enumerate(lines, start=1):
         prim = primitive(line.primitive)
-        rule = Rule(number, prim, token(line.lhs), *map(token, line.rhs))
+        rule = Rule(number, token(line.lhs), *map(token, line.rhs))
         result.rules.append(rule)
         if prim is not None:
             result.primitives[rule] = prim

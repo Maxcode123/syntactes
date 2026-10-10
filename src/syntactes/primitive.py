@@ -1,5 +1,6 @@
 """
-Primitives a rule can be tagged with, as in `int % expr -> NUMBER`.
+Primitives a grammar's rules can be tagged with, as in `int % expr -> NUMBER`.
+A grammar keeps them in `Grammar.primitives`, keyed by rule.
 
 There are value types (`Integer`, `Float`, `String`, `NoneType`, `Boolean`),
 whose call converts one value, and binary operations (`Addition`,

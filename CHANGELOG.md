@@ -2,6 +2,14 @@
 
 ## 0.8.0 - Unreleased
 
+### Breaking changes
+
+- `Rule` no longer takes a primitive: it's `Rule(number, lhs, *rhs)` again,
+  and `Rule.primitive` is removed. Primitives are in `Grammar.primitives`, and
+  `str(rule)` no longer prints them. Calls written for 0.7, like
+  `Rule(0, None, S, E, EOF)`, don't raise, but read `None` as the left-hand
+  side.
+
 ### Added
 
 - The `bool` primitive (`Boolean`), and binary operation primitives that take

@@ -38,17 +38,17 @@ class TestFromText(TestCase):
 
     @args(EXPR_TEXT)
     def test_starting_rule_is_added(self):
-        self.assertEqual(self.result().starting_rule, Rule(0, None, START, expr, EOF))
+        self.assertEqual(self.result().starting_rule, Rule(0, START, expr, EOF))
 
     @args(EXPR_TEXT)
     def test_rules_in_line_order(self):
         self.assertEqual(
             self.result().rules,
             (
-                Rule(0, None, START, expr, EOF),
-                Rule(1, None, expr, expr, PLUS, term),
-                Rule(2, None, expr, term),
-                Rule(3, None, term, NUMBER),
+                Rule(0, START, expr, EOF),
+                Rule(1, expr, expr, PLUS, term),
+                Rule(2, expr, term),
+                Rule(3, term, NUMBER),
             ),
         )
 
@@ -70,11 +70,11 @@ class TestFromText(TestCase):
 
     @args("  expr   ->   NUMBER   PLUS  \n")
     def test_extra_whitespace(self):
-        self.assertEqual(self.result().rules[1], Rule(1, None, expr, NUMBER, PLUS))
+        self.assertEqual(self.result().rules[1], Rule(1, expr, NUMBER, PLUS))
 
     @args("expr->NUMBER\n")
     def test_no_whitespace_around_arrow(self):
-        self.assertEqual(self.result().rules[1], Rule(1, None, expr, NUMBER))
+        self.assertEqual(self.result().rules[1], Rule(1, expr, NUMBER))
 
     @args("int % expr -> expr PLUS NUMBER\n")
     def test_primitive_not_part_of_symbols(self):
@@ -100,90 +100,37 @@ class TestFromText(TestCase):
         self.assertEqual(self.result().starting_rule.rhs, (expr, EOF))
 
 
-class TestFromTextPrimitives(TestCase):
-    def subject(self, text):
-        return [rule.primitive for rule in Grammar.from_text(text).rules]
-
-    @args("int % expr -> NUMBER\n")
-    def test_int(self):
-        self.assertResult([None, Integer])
-
-    @args("float % expr -> NUMBER\n")
-    def test_float(self):
-        self.assertResult([None, Float])
-
-    @args("str % expr -> NUMBER\n")
-    def test_str(self):
-        self.assertResult([None, String])
-
-    @args("None % expr -> NUMBER\n")
-    def test_none(self):
-        self.assertResult([None, NoneType])
-
-    @args("bool % expr -> NUMBER\n")
-    def test_bool(self):
-        self.assertResult([None, Boolean])
-
-    @args("add % expr -> expr PLUS NUMBER\nexpr -> NUMBER\n")
-    def test_add(self):
-        self.assertResult([None, Addition, None])
-
-    @args("eq % expr -> NUMBER EQ NUMBER\n")
-    def test_eq(self):
-        self.assertResult([None, EqualityComparison])
-
-    @args(EXPR_TEXT)
-    def test_without_primitive(self):
-        self.assertResult([None, None, None, None])
-
-    @args("int % expr -> expr PLUS term\nexpr -> term\nstr % term -> NUMBER\n")
-    def test_mixed(self):
-        self.assertResult([None, Integer, None, String])
-
-    @args("  int   %   expr   ->   NUMBER  \n")
-    def test_extra_whitespace(self):
-        self.assertResult([None, Integer])
-
-    @args("int%expr->NUMBER\n")
-    def test_no_whitespace(self):
-        self.assertResult([None, Integer])
-
-    @args("expr -> items\nNone % items ->\n")
-    def test_empty_rule(self):
-        self.assertResult([None, None, NoneType])
-
-
 class TestFromTextPrimitivesMap(TestCase):
     def subject(self, text):
         return dict(Grammar.from_text(text).primitives)
 
     @args("int % expr -> NUMBER\n")
     def test_int(self):
-        self.assertResult({Rule(1, None, expr, NUMBER): Integer})
+        self.assertResult({Rule(1, expr, NUMBER): Integer})
 
     @args("float % expr -> NUMBER\n")
     def test_float(self):
-        self.assertResult({Rule(1, None, expr, NUMBER): Float})
+        self.assertResult({Rule(1, expr, NUMBER): Float})
 
     @args("str % expr -> NUMBER\n")
     def test_str(self):
-        self.assertResult({Rule(1, None, expr, NUMBER): String})
+        self.assertResult({Rule(1, expr, NUMBER): String})
 
     @args("None % expr -> NUMBER\n")
     def test_none(self):
-        self.assertResult({Rule(1, None, expr, NUMBER): NoneType})
+        self.assertResult({Rule(1, expr, NUMBER): NoneType})
 
     @args("bool % expr -> NUMBER\n")
     def test_bool(self):
-        self.assertResult({Rule(1, None, expr, NUMBER): Boolean})
+        self.assertResult({Rule(1, expr, NUMBER): Boolean})
 
     @args("add % expr -> expr PLUS NUMBER\nexpr -> NUMBER\n")
     def test_add(self):
-        self.assertResult({Rule(1, None, expr, expr, PLUS, NUMBER): Addition})
+        self.assertResult({Rule(1, expr, expr, PLUS, NUMBER): Addition})
 
     @args("eq % expr -> NUMBER EQ NUMBER\n")
     def test_eq(self):
-        self.assertResult({Rule(1, None, expr, NUMBER, EQ, NUMBER): EqualityComparison})
+        self.assertResult({Rule(1, expr, NUMBER, EQ, NUMBER): EqualityComparison})
 
     @args(EXPR_TEXT)
     def test_without_primitive(self):
@@ -193,31 +140,31 @@ class TestFromTextPrimitivesMap(TestCase):
     def test_mixed(self):
         self.assertResult(
             {
-                Rule(1, None, expr, expr, PLUS, term): Integer,
-                Rule(3, None, term, NUMBER): String,
+                Rule(1, expr, expr, PLUS, term): Integer,
+                Rule(3, term, NUMBER): String,
             }
         )
 
     @args("expr -> items\nNone % items ->\n")
     def test_empty_rule(self):
-        self.assertResult({Rule(2, None, items): NoneType})
+        self.assertResult({Rule(2, items): NoneType})
 
 
 class TestFromTextRoundTrip(TestCase):
     def subject(self, text):
         rules = Grammar.from_text(text).rules[1:]
-        again = Grammar.from_text("\n".join(map(str, rules))).rules[1:]
-        return [(str(rule), rule.primitive) for rule in again]
+        return Grammar.from_text("\n".join(map(str, rules)))
 
     @args("int % expr -> expr PLUS term\nexpr -> term\nNone % term ->\n")
-    def test_rules_read_back_from_str(self):
-        self.assertResult(
-            [
-                ("int % expr -> expr PLUS term", Integer),
-                ("expr -> term", None),
-                ("None % term -> ε", NoneType),
-            ]
+    def test_symbols_read_back_from_str(self):
+        self.assertEqual(
+            [str(rule) for rule in self.result().rules[1:]],
+            ["expr -> expr PLUS term", "expr -> term", "term -> ε"],
         )
+
+    @args("int % expr -> expr PLUS term\nexpr -> term\nNone % term ->\n")
+    def test_primitives_not_read_back_from_str(self):
+        self.assertEqual(dict(self.result().primitives), {})
 
 
 ALL = "int, float, str, None, bool, add, sub, mul, div, pow, lt, le, gt, ge, eq, ne"
