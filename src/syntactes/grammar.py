@@ -4,7 +4,7 @@ from types import MappingProxyType
 from typing import Self
 
 from syntactes import Rule, Token, _text
-from syntactes.primitive import Primitive, _is_binary, primitives
+from syntactes.primitive import NoneType, Primitive, _is_binary, primitives
 
 
 class GrammarError(ValueError):
@@ -223,10 +223,15 @@ class Grammar:
                 )
 
         for rule, primitive in self._primitives.items():
+            count = self._symbol_count(rule)
             if not _is_binary(primitive):
+                if primitive is not NoneType and count != 1:
+                    raise GrammarError(
+                        f"Rule '{rule}' needs exactly 1 symbol for its primitive "
+                        f"{primitive.string()}."
+                    )
                 continue
 
-            count = 0 if rule.is_empty() else rule.rhs_len
             if count < 2:
                 raise GrammarError(
                     f"Rule '{rule}' needs at least 2 symbols for its primitive "
@@ -243,3 +248,16 @@ class Grammar:
 
             if left == right:
                 raise GrammarError(f"Operand positions of rule '{rule}' must differ.")
+
+    def _symbol_count(self, rule: Rule) -> int:
+        """
+        The number of tokens a primitive of `rule` gets: none for an empty rule,
+        and the starting rule's trailing EOF doesn't count.
+        """
+        if rule.is_empty():
+            return 0
+
+        if rule == self.starting_rule:
+            return rule.rhs_len - 1
+
+        return rule.rhs_len

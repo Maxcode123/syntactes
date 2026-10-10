@@ -121,6 +121,23 @@ class TestGrammarPrimitives(TestCase):
     def test_starting_rule_allowed(self):
         self.assertEqual(dict(self.result().primitives), {valid_rules[0]: NoneType})
 
+    @args({valid_rules[1]: Integer})
+    def test_value_type_with_three_symbols(self):
+        self.assertResultRaises(GrammarError)
+
+    @args({valid_rules[1]: NoneType})
+    def test_none_with_three_symbols(self):
+        self.assertEqual(dict(self.result().primitives), {valid_rules[1]: NoneType})
+
+    # S -> E $ has one symbol once $ is left out.
+    @args({valid_rules[0]: Integer})
+    def test_value_type_on_starting_rule(self):
+        self.assertEqual(dict(self.result().primitives), {valid_rules[0]: Integer})
+
+    @args({valid_rules[0]: Addition})
+    def test_binary_on_starting_rule(self):
+        self.assertResultRaises(GrammarError)
+
     def test_keyword_only(self):
         with self.assertRaises(TypeError):
             Grammar(valid_rules[0], valid_rules, valid_tokens, {})  # ty: ignore[too-many-positional-arguments]

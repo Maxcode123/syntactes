@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 
 from syntactes import Rule, Token
 from syntactes.primitive import (
+    NoneType,
     Primitive,
     _is_binary,
     primitives,
@@ -204,16 +205,22 @@ def _primitive_error(raw: str, rhs: list[str]) -> str | None:
     if name not in by_name:
         return f"invalid primitive {name} expected one of {', '.join(by_name)}"
 
-    if not _is_binary(by_name[name]):
+    primitive = by_name[name]
+    count = 0 if rhs == [Token.null().symbol] else len(rhs)
+    if not _is_binary(primitive):
         if inside is not None:
             return f"{name} takes no operand positions"
+
+        # A value type converts the rule's single token; None ignores them all.
+        if primitive is not NoneType and count != 1:
+            return f"{name} needs exactly 1 symbol"
+
         return None
 
     if inside is not None and _OPERANDS.fullmatch(inside) is None:
         return invalid
 
     _, operands = _split_primitive(raw)
-    count = 0 if rhs == [Token.null().symbol] else len(rhs)
     if count < 2:
         return f"{name} needs at least 2 symbols"
 

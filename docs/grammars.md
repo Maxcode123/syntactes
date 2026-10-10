@@ -64,6 +64,10 @@ kinds. A value type converts one value when it's called:
 | `None`  | `NoneType` | `NoneType(x)` is always `None`              |
 | `bool`  | `Boolean`  | `True` for `"1"` or `"true"`, else `False`  |
 
+A value type's rule must have exactly one symbol, the one it converts, as in
+`int % expr -> NUMBER`. `None` ignores its input, so it can tag any rule. For
+the starting rule, the trailing `$` doesn't count.
+
 A binary operation takes two operands when it's called, and returns the
 result:
 
@@ -167,8 +171,9 @@ except GrammarError as e:
 ```
 
 A line is an error if it has no `->`, an invalid name, a `$`, an `ε` next to
-other symbols, an unknown primitive, a `%` without a primitive before it,
-[operand positions](#operands) that aren't valid, or repeats an earlier rule.
+other symbols, an unknown primitive, a `%` without a primitive before it, a
+value type on a rule without exactly one symbol, [operand positions](#operands)
+that aren't valid, or repeats an earlier rule.
 The message for an unknown primitive lists the valid names:
 
 ```python
@@ -279,7 +284,8 @@ value to pass data to your callbacks.
 - operands are given for a rule that's not in the rules, or whose primitive
   isn't a binary operation;
 - a binary operation's rule has fewer than 2 symbols, or its operand positions
-  are equal or out of range.
+  are equal or out of range;
+- a value type other than `None` tags a rule without exactly one symbol.
 
 It stops at the first problem, and `problems` holds its message as
 `[(None, message)]`.

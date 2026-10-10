@@ -10,6 +10,10 @@
   `Rule(0, None, S, E, EOF)`, don't raise, but read `None` as the left-hand
   side.
 
+- The value types `int`, `float`, `str` and `bool` can only tag a rule with
+  exactly one symbol, the one they convert. `int % expr -> expr PLUS NUMBER`
+  is now an error. `None` can still tag any rule.
+
 ### Added
 
 - The `bool` primitive (`Boolean`), and binary operation primitives that take
