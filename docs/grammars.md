@@ -50,10 +50,10 @@ start, add, number = grammar.rules
 ### Primitives
 
 A rule can start with a primitive and `%`: `int % expr -> NUMBER`. The
-primitive is stored on the rule as `rule.primitive`. Rules without one, the
-starting rule included, have `None`.
+primitive is stored in `grammar.primitives`, a read-only mapping from rules to
+primitives. Rules without one, the starting rule included, aren't in it.
 
-`rule.primitive` is one of the classes in `syntactes.primitive`. There are two
+Each primitive is one of the classes in `syntactes.primitive`. There are two
 kinds. A value type converts one value when it's called:
 
 | Text    | Class      | Call                                        |
@@ -95,6 +95,7 @@ int % expr -> NUMBER
 for rule in grammar.rules:
     print(f"{rule.number}. {rule}")
 
+print(grammar.primitives[grammar.rules[3]], grammar.primitives.get(grammar.rules[0]))
 print(repr(Integer("42")), repr(Boolean("true")))
 print(Addition(1, 2), LowerThanComparison(1, 2))
 ```
@@ -105,6 +106,7 @@ print(Addition(1, 2), LowerThanComparison(1, 2))
 2. bool % stmt -> TRUE
 3. add % expr -> expr PLUS NUMBER
 4. int % expr -> NUMBER
+<class 'syntactes.primitive.Addition'> None
 42 True
 3 True
 ```
@@ -211,8 +213,11 @@ grammar = Grammar(rule_1, rules, tokens)
 An empty rule can be written as `Rule(n, None, A)` or
 `Rule(n, None, A, Token.null())`.
 
-To give a rule a primitive, pass one of the `syntactes.primitive` classes
-instead of `None`, as in `Rule(3, Integer, T, x)`.
+To give rules primitives, pass `Grammar` a mapping from rules to
+`syntactes.primitive` classes as the keyword argument `primitives`, as in
+`Grammar(rule_1, rules, tokens, primitives={rule_4: Integer})`. A rule is
+matched by its symbols, not its number. The mapping is copied, and
+`grammar.primitives` is read-only.
 
 Tokens are compared by their symbol and whether they're terminal. A token can
 also carry a `value`, which equality and hashing ignore, so `Token("x", True, 1)`
@@ -228,7 +233,9 @@ value to pass data to your callbacks.
 - a rule's left-hand side is a terminal;
 - a rule uses a symbol that is not in the tokens (`ε` is always allowed);
 - a non-terminal has no rules;
-- two rules have the same number.
+- two rules have the same number;
+- a primitive is given for a rule that's not in the rules, or isn't one of
+  `syntactes.primitive.primitives()`.
 
 It stops at the first problem, and `problems` holds its message as
 `[(None, message)]`.

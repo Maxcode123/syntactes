@@ -34,6 +34,7 @@ class _Line:
 @dataclass
 class ParsedText:
     rules: list[Rule] = field(default_factory=list)
+    primitives: dict[Rule, Primitive] = field(default_factory=dict)
     errors: list[tuple[int | None, str]] = field(default_factory=list)
     warnings: list[tuple[int, str]] = field(default_factory=list)
 
@@ -70,10 +71,11 @@ def parse(text: str) -> ParsedText:
     start = Token(lines[0].lhs, False)
     result.rules.append(Rule(0, None, Token(START_SYMBOL, False), start, Token.eof()))
     for number, line in enumerate(lines, start=1):
-        rule = Rule(
-            number, primitive(line.primitive), token(line.lhs), *map(token, line.rhs)
-        )
+        prim = primitive(line.primitive)
+        rule = Rule(number, prim, token(line.lhs), *map(token, line.rhs))
         result.rules.append(rule)
+        if prim is not None:
+            result.primitives[rule] = prim
 
     result.warnings = _warnings(lines, result.rules[1:], start)
     return result

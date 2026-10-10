@@ -13,6 +13,11 @@
 
 - `syntactes.primitive.primitives()` returns every primitive.
 
+- `Grammar.primitives`, a read-only mapping from rules to their primitive.
+  `Grammar` takes it as the keyword-only argument `primitives`, and raises
+  `GrammarError` for a rule that's not in the grammar or a value that isn't a
+  primitive. `Grammar.from_text` fills it from `int % expr -> NUMBER` lines.
+
 - The error for an unknown primitive in `Grammar.from_text` lists every valid
   name.
 

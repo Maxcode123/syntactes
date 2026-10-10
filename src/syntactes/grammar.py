@@ -1,8 +1,10 @@
 import warnings
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
+from types import MappingProxyType
 from typing import Self
 
 from syntactes import Rule, Token, _text
+from syntactes.primitive import Primitive, primitives
 
 
 class GrammarError(ValueError):
@@ -50,19 +52,38 @@ class Grammar:
     """
 
     def __init__(
-        self, starting_rule: Rule, rules: Iterable[Rule], tokens: set[Token]
+        self,
+        starting_rule: Rule,
+        rules: Iterable[Rule],
+        tokens: set[Token],
+        *,
+        primitives: Mapping[Rule, Primitive] | None = None,
     ) -> None:
         """
         `starting_rule` should also be included in `rules`, and end with the EOF
         token.
+
+        `primitives` maps some of the rules to a primitive from
+        `syntactes.primitive`. A rule is matched by its symbols, not its number.
 
         Raises `GrammarError` if the grammar is malformed.
         """
         self.starting_rule = starting_rule
         self.rules = tuple(rules)
         self.tokens = tokens
+        self._primitives = dict(primitives or {})
 
         self._validate()
+
+    @property
+    def primitives(self) -> Mapping[Rule, Primitive]:
+        """
+        The rules' primitives, from `syntactes.primitive`. It's read-only, and
+        rules without a primitive aren't in it.
+        """
+        # Stored as a dict and wrapped on access, because a mappingproxy can't
+        # be pickled or deep-copied.
+        return MappingProxyType(self._primitives)
 
     @classmethod
     def from_text(cls, text: str) -> Self:
@@ -76,6 +97,9 @@ class Grammar:
         Names on a left-hand side are non-terminals, and every other symbol is a
         terminal. An empty right-hand side, or a lone `ε`, is an empty rule.
         Blank lines and lines starting with `#` are ignored.
+
+        A rule can start with a primitive and `%`, as in
+        `int % expr -> NUMBER`. It's stored in `primitives`.
 
         The first rule's left-hand side is the start symbol: the starting rule
         `<start> -> expr $` is added as rule 0, and the rules of the text are
@@ -97,7 +121,7 @@ class Grammar:
             tokens.add(rule.lhs)
             tokens.update(rule.rhs)
 
-        return cls(parsed.rules[0], parsed.rules, tokens)
+        return cls(parsed.rules[0], parsed.rules, tokens, primitives=parsed.primitives)
 
     def terminals(self) -> set[Token]:
         """
@@ -147,3 +171,16 @@ class Grammar:
 
                 if not symbol.is_terminal and symbol not in lhs_symbols:
                     raise GrammarError(f"Non-terminal '{symbol}' has no rules.")
+
+        valid = primitives()
+        for rule, primitive in self._primitives.items():
+            if rule not in self.rules:
+                raise GrammarError(
+                    f"Primitive given for rule '{rule}', which is not in the rules."
+                )
+
+            if primitive not in valid:
+                raise GrammarError(
+                    f"Primitive {primitive!r} of rule '{rule}' is not one of "
+                    "syntactes.primitive.primitives()."
+                )

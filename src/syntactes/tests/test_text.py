@@ -21,6 +21,7 @@ items = Token("items", False)
 PLUS = Token("PLUS", True)
 NUMBER = Token("NUMBER", True)
 COMMA = Token("COMMA", True)
+EQ = Token("EQ", True)
 
 EXPR_TEXT = """\
 # Sums of numbers.
@@ -150,6 +151,56 @@ class TestFromTextPrimitives(TestCase):
     @args("expr -> items\nNone % items ->\n")
     def test_empty_rule(self):
         self.assertResult([None, None, NoneType])
+
+
+class TestFromTextPrimitivesMap(TestCase):
+    def subject(self, text):
+        return dict(Grammar.from_text(text).primitives)
+
+    @args("int % expr -> NUMBER\n")
+    def test_int(self):
+        self.assertResult({Rule(1, None, expr, NUMBER): Integer})
+
+    @args("float % expr -> NUMBER\n")
+    def test_float(self):
+        self.assertResult({Rule(1, None, expr, NUMBER): Float})
+
+    @args("str % expr -> NUMBER\n")
+    def test_str(self):
+        self.assertResult({Rule(1, None, expr, NUMBER): String})
+
+    @args("None % expr -> NUMBER\n")
+    def test_none(self):
+        self.assertResult({Rule(1, None, expr, NUMBER): NoneType})
+
+    @args("bool % expr -> NUMBER\n")
+    def test_bool(self):
+        self.assertResult({Rule(1, None, expr, NUMBER): Boolean})
+
+    @args("add % expr -> expr PLUS NUMBER\nexpr -> NUMBER\n")
+    def test_add(self):
+        self.assertResult({Rule(1, None, expr, expr, PLUS, NUMBER): Addition})
+
+    @args("eq % expr -> NUMBER EQ NUMBER\n")
+    def test_eq(self):
+        self.assertResult({Rule(1, None, expr, NUMBER, EQ, NUMBER): EqualityComparison})
+
+    @args(EXPR_TEXT)
+    def test_without_primitive(self):
+        self.assertResult({})
+
+    @args("int % expr -> expr PLUS term\nexpr -> term\nstr % term -> NUMBER\n")
+    def test_mixed(self):
+        self.assertResult(
+            {
+                Rule(1, None, expr, expr, PLUS, term): Integer,
+                Rule(3, None, term, NUMBER): String,
+            }
+        )
+
+    @args("expr -> items\nNone % items ->\n")
+    def test_empty_rule(self):
+        self.assertResult({Rule(2, None, items): NoneType})
 
 
 class TestFromTextRoundTrip(TestCase):

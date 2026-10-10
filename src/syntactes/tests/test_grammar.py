@@ -1,6 +1,10 @@
+import copy
+import pickle
+
 from unittest_extensions import TestCase, args
 
 from syntactes import Grammar, GrammarError, Rule
+from syntactes.primitive import Addition, Integer, NoneType
 from syntactes.tests import data
 from syntactes.tests.data import EOF, NULL, PLUS, A, E, S, T, a, x
 
@@ -70,6 +74,71 @@ class TestGrammar(TestCase):
     @args(valid_rules[0], (*valid_rules, Rule(2, None, T, PLUS)), valid_tokens)
     def test_duplicate_rule_numbers(self):
         self.assert_grammar_error()
+
+
+class TestGrammarPrimitives(TestCase):
+    def subject(self, primitives):
+        return Grammar(valid_rules[0], valid_rules, valid_tokens, primitives=primitives)
+
+    @args(None)
+    def test_empty_by_default(self):
+        self.assertEqual(dict(self.result().primitives), {})
+
+    @args({valid_rules[2]: Integer})
+    def test_stored(self):
+        self.assertEqual(dict(self.result().primitives), {valid_rules[2]: Integer})
+
+    def test_copied_from_argument(self):
+        primitives = {valid_rules[2]: Integer}
+        grammar = Grammar(
+            valid_rules[0], valid_rules, valid_tokens, primitives=primitives
+        )
+        primitives[valid_rules[1]] = Addition
+        self.assertEqual(dict(grammar.primitives), {valid_rules[2]: Integer})
+
+    @args({valid_rules[2]: Integer})
+    def test_read_only(self):
+        with self.assertRaises(TypeError):
+            self.result().primitives[valid_rules[1]] = Addition
+
+    @args({Rule(3, None, T, PLUS): Integer})
+    def test_rule_not_in_rules(self):
+        self.assertResultRaises(GrammarError)
+
+    @args({Rule(99, None, T, x): Integer})
+    def test_rule_matched_by_symbols(self):
+        self.assertEqual(dict(self.result().primitives), {valid_rules[2]: Integer})
+
+    @args({valid_rules[2]: int})
+    def test_builtin_type_value(self):
+        self.assertResultRaises(GrammarError)
+
+    @args({valid_rules[2]: lambda value: value})
+    def test_function_value(self):
+        self.assertResultRaises(GrammarError)
+
+    @args({valid_rules[0]: NoneType})
+    def test_starting_rule_allowed(self):
+        self.assertEqual(dict(self.result().primitives), {valid_rules[0]: NoneType})
+
+    def test_keyword_only(self):
+        with self.assertRaises(TypeError):
+            Grammar(valid_rules[0], valid_rules, valid_tokens, {})  # ty: ignore[too-many-positional-arguments]
+
+    @args({valid_rules[2]: Integer})
+    def test_pickle_round_trip(self):
+        grammar = pickle.loads(pickle.dumps(self.result()))
+        self.assertEqual(dict(grammar.primitives), {valid_rules[2]: Integer})
+
+    @args({valid_rules[2]: Integer})
+    def test_deepcopy(self):
+        grammar = copy.deepcopy(self.result())
+        self.assertEqual(dict(grammar.primitives), {valid_rules[2]: Integer})
+
+    @args({valid_rules[2]: Integer})
+    def test_deepcopy_still_read_only(self):
+        with self.assertRaises(TypeError):
+            copy.deepcopy(self.result()).primitives[valid_rules[1]] = Addition
 
 
 class TestGrammarErrorIsValueError(TestCase):
