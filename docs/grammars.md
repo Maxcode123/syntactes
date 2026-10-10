@@ -51,7 +51,10 @@ start, add, number = grammar.rules
 
 A rule can start with a primitive and `%`: `int % expr -> NUMBER`. The
 primitive is stored in `grammar.primitives`, a read-only mapping from rules to
-primitives. Rules without one, the starting rule included, aren't in it.
+primitives. Rules without one, the starting rule included, aren't in it. When
+the parser reduces by a rule without a callback, it applies the rule's
+primitive to compute its value. See [Primitives](parsing.md#primitives) in the
+parsing guide.
 
 Each primitive is one of the classes in `syntactes.primitive`. There are two
 kinds. A value type converts one value when it's called:
