@@ -12,3 +12,8 @@ from .generator import (
     SLRGenerator as SLRGenerator,
     LR1Generator as LR1Generator,
 )
+from .parser import (
+    LR0Parser as LR0Parser,
+    SLRParser as SLRParser,
+    LR1Parser as LR1Parser,
+)
