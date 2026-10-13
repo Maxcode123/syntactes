@@ -1,5 +1,5 @@
-from syntactes.primitive import Primitive
-from syntactes.rule import Rule
+from syntactes.config.primitive import Primitive
+from syntactes.config.rule import Rule
 
 
 class ParserError(Exception):

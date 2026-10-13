@@ -4,7 +4,7 @@ import pickle
 from unittest_extensions import TestCase, args
 
 from syntactes import Grammar, GrammarError, Rule
-from syntactes.primitive import Addition, Integer, NoneType, Subtraction
+from syntactes.config import Addition, Integer, NoneType, Subtraction
 from syntactes.tests import data
 from syntactes.tests.data import EOF, NULL, PLUS, A, E, S, T, a, x
 

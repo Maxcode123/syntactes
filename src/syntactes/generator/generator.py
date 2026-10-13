@@ -2,10 +2,10 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from typing import cast
 
-from syntactes import Grammar, Rule, Token
-from syntactes._action import Action
-from syntactes._item import LR0Item, LR1Item
-from syntactes._state import LR0State, LR1State
+from syntactes.config import Grammar, Rule, Token
+from syntactes.generator._action import Action
+from syntactes.generator._item import LR0Item, LR1Item
+from syntactes.generator._state import LR0State, LR1State
 from syntactes.parsing_table import (
     Entry,
     LR0ParsingTable,

@@ -1,8 +1,8 @@
 from enum import Enum
 
-from syntactes import Token
-from syntactes._action import Action, ActionType
-from syntactes._state import LR0State
+from syntactes.config import Token
+from syntactes.generator._action import Action, ActionType
+from syntactes.generator._state import LR0State
 
 
 class ConflictType(Enum):

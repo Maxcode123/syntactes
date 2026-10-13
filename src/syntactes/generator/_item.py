@@ -1,7 +1,6 @@
 from typing import Protocol
 
-from syntactes.rule import Rule
-from syntactes.token import Token
+from syntactes.config import Rule, Token
 
 
 class Item(Protocol):

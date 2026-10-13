@@ -3,7 +3,7 @@ import warnings
 from unittest_extensions import TestCase, args
 
 from syntactes import Grammar, GrammarError, GrammarWarning, Rule, Token
-from syntactes.primitive import (
+from syntactes.config import (
     Addition,
     Boolean,
     EqualityComparison,

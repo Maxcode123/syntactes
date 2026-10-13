@@ -1,6 +1,6 @@
 from unittest_extensions import TestCase, args
 
-from syntactes.primitive import (
+from syntactes.config.primitive import (
     Addition,
     Boolean,
     Division,

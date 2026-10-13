@@ -1,8 +1,8 @@
 from unittest_extensions import TestCase, args
 
-from syntactes._action import Action, ActionType
-from syntactes._item import LR0Item, LR1Item
 from syntactes.generator import LR0Generator, LR1Generator, SLRGenerator
+from syntactes.generator._action import Action, ActionType
+from syntactes.generator._item import LR0Item, LR1Item
 from syntactes.tests.data import (
     EOF,
     LPAREN,

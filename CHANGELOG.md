@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.9.0 - Unreleased
+
+### Breaking changes
+
+- The modules that describe a grammar move into `syntactes.config`, and the
+  generator modules into `syntactes.generator`. `syntactes.token`,
+  `syntactes.rule`, `syntactes.grammar` and `syntactes.primitive` no longer
+  exist. Import primitives from `syntactes.config`, as in
+  `from syntactes.config import Integer`. `syntactes.config` also exports
+  `Token`, `Rule`, `Grammar`, `GrammarError` and `GrammarWarning`, and they're
+  still exported from `syntactes`. `from syntactes.generator import
+  LR1Generator` still works.
+
 ## 0.8.0 - 2026-10-10
 
 ### Breaking changes

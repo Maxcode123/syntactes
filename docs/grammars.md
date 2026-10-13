@@ -56,7 +56,7 @@ the parser reduces by a rule without a callback, it applies the rule's
 primitive to compute its value. See [Primitives](parsing.md#primitives) in the
 parsing guide.
 
-Each primitive is one of the classes in `syntactes.primitive`. There are two
+Each primitive is one of the classes in `syntactes.config`. There are two
 kinds. A value type converts one value when it's called:
 
 | Text    | Class      | Call                                        |
@@ -90,7 +90,7 @@ result:
 
 ```python
 from syntactes import Grammar
-from syntactes.primitive import Addition, Boolean, Integer, LowerThanComparison
+from syntactes.config import Addition, Boolean, Integer, LowerThanComparison
 
 grammar = Grammar.from_text("""
 None % stmt -> PRINT expr
@@ -119,7 +119,7 @@ print(Addition(1, 2), LowerThanComparison(1, 2))
 ```
 
 Every primitive's `string()` method returns the name used in the text.
-`syntactes.primitive.primitives()` returns all of them, in the order of the
+`syntactes.config.primitives()` returns all of them, in the order of the
 tables above. The primitive isn't part of the rule, so `str(rule)` doesn't
 print it.
 
@@ -258,7 +258,7 @@ An empty rule can be written as `Rule(n, A)` or
 `Rule(n, A, Token.null())`.
 
 To give rules primitives, pass `Grammar` a mapping from rules to
-`syntactes.primitive` classes as the keyword argument `primitives`, as in
+`syntactes.config` classes as the keyword argument `primitives`, as in
 `Grammar(rule_1, rules, tokens, primitives={rule_4: Integer})`. A rule is
 matched by its symbols, not its number. The mapping is copied, and
 `grammar.primitives` is read-only.
@@ -283,7 +283,7 @@ value to pass data to your callbacks.
 - a non-terminal has no rules;
 - two rules have the same number;
 - a primitive is given for a rule that's not in the rules, or isn't one of
-  `syntactes.primitive.primitives()`;
+  `syntactes.config.primitives()`;
 - operands are given for a rule that's not in the rules, or whose primitive
   isn't a binary operation;
 - a binary operation's rule has fewer than 2 symbols, or its operand positions

@@ -1,9 +1,9 @@
 from collections.abc import Iterable
 from typing import Protocol, Self
 
-from syntactes import Grammar, Token
-from syntactes._action import Action
-from syntactes._state import LR0State
+from syntactes.config import Grammar, Token
+from syntactes.generator._action import Action
+from syntactes.generator._state import LR0State
 from syntactes.parsing_table import Conflict, Entry
 
 type Row = dict[Token, list[Action]]

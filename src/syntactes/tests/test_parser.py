@@ -1,7 +1,8 @@
 from unittest_extensions import TestCase, args
 
 from syntactes import Grammar, Rule, Token
-from syntactes._action import Action
+from syntactes.config import Integer
+from syntactes.generator._action import Action
 from syntactes.parser import (
     LR0Parser,
     LR1Parser,
@@ -11,7 +12,6 @@ from syntactes.parser import (
     SLRParser,
     UnexpectedTokenError,
 )
-from syntactes.primitive import Integer
 from syntactes.tests.data import (
     EOF,
     LPAREN,

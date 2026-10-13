@@ -1,9 +1,9 @@
-::: syntactes.token
+::: syntactes.config.token
 
-::: syntactes.rule
+::: syntactes.config.rule
 
-::: syntactes.grammar
+::: syntactes.config.grammar
 
-::: syntactes.generator
+::: syntactes.config.primitive
 
-::: syntactes.primitive
+::: syntactes.generator.generator

@@ -10,8 +10,8 @@ terminal. An empty right-hand side, or a lone `ε`, is an empty rule.
 import re
 from dataclasses import dataclass, field
 
-from syntactes import Rule, Token
-from syntactes.primitive import (
+from syntactes.config import Rule, Token
+from syntactes.config.primitive import (
     NoneType,
     Primitive,
     _is_binary,

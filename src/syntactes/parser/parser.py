@@ -2,23 +2,17 @@ from abc import ABC
 from collections.abc import Callable, Iterable
 from typing import cast
 
-from syntactes import (
-    Grammar,
-    LR0Generator,
-    LR1Generator,
-    Rule,
-    SLRGenerator,
-    Token,
-)
-from syntactes._action import Action, ActionType
-from syntactes._state import LR0State
+from syntactes.config import Grammar, Rule, Token
+from syntactes.config.primitive import NoneType, Primitive, _is_binary
+from syntactes.generator import LR0Generator, LR1Generator, SLRGenerator
+from syntactes.generator._action import Action, ActionType
+from syntactes.generator._state import LR0State
 from syntactes.parser import (
     NotAcceptedError,
     PrimitiveError,
     UnexpectedTokenError,
 )
 from syntactes.parsing_table import ParsingTable
-from syntactes.primitive import NoneType, Primitive, _is_binary
 
 type Executable = Callable[..., object]
 

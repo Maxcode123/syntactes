@@ -1,19 +1,17 @@
-# isort: skip_file
-# Import order matters: later modules import the earlier ones from `syntactes`.
-from .token import Token as Token
-from .rule import Rule as Rule
-from .grammar import (
+from .config import (
     Grammar as Grammar,
     GrammarError as GrammarError,
     GrammarWarning as GrammarWarning,
+    Rule as Rule,
+    Token as Token,
 )
 from .generator import (
     LR0Generator as LR0Generator,
-    SLRGenerator as SLRGenerator,
     LR1Generator as LR1Generator,
+    SLRGenerator as SLRGenerator,
 )
 from .parser import (
     LR0Parser as LR0Parser,
-    SLRParser as SLRParser,
     LR1Parser as LR1Parser,
+    SLRParser as SLRParser,
 )

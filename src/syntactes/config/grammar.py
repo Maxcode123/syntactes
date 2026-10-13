@@ -3,8 +3,8 @@ from collections.abc import Iterable, Mapping
 from types import MappingProxyType
 from typing import Self
 
-from syntactes import Rule, Token, _text
-from syntactes.primitive import NoneType, Primitive, _is_binary, primitives
+from syntactes.config import Rule, Token, _text
+from syntactes.config.primitive import NoneType, Primitive, _is_binary, primitives
 
 
 class GrammarError(ValueError):

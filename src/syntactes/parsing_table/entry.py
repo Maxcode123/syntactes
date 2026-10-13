@@ -1,6 +1,6 @@
-from syntactes import Token
-from syntactes._action import Action
-from syntactes._state import LR0State
+from syntactes.config import Token
+from syntactes.generator._action import Action
+from syntactes.generator._state import LR0State
 
 type Row = dict[Token, list[Action]]
 

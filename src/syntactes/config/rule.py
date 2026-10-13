@@ -1,4 +1,4 @@
-from syntactes.token import Token
+from syntactes.config.token import Token
 
 
 class Rule:

@@ -31,8 +31,11 @@ make sure `uv run ruff format --check src examples` is clean. CI
 Tooling notes:
 
 - ty and ruff target Python 3.13, which they take from `requires-python`.
-- The `__init__.py` files use `# isort: skip_file`. Their import order resolves
-  the circular imports between package modules, so don't sort them.
+- The subpackage `__init__.py` files use `# isort: skip_file`. Their import
+  order resolves the circular imports between package modules, so don't sort
+  them. Modules import from the subpackages (`syntactes.config`,
+  `syntactes.generator`), never from the root `syntactes`, so the root
+  `__init__.py` is sorted normally.
 - Table generation is deterministic: states are numbered breadth-first and
   output doesn't depend on `PYTHONHASHSEED`. `test_determinism.py` checks
   this across seeds, and CI runs the suite under several.
@@ -41,36 +44,40 @@ Tooling notes:
 
 All code lives in `src/syntactes/`:
 
-- `token.py`: `Token` (a symbol, `is_terminal`, and an optional `value`), with
-  `Token.eof()` (`$`) and `Token.null()` (`ε`). Equality and hashing ignore
-  `value`.
-- `rule.py`: `Rule(number, lhs, *rhs)`. Equality and hashing use only the
-  symbols, not the number. A rule's primitive lives on the grammar, not on it.
-- `primitive.py`: the primitives a rule can be tagged with. Value types
-  (`Integer`, `Float`, `String`, `NoneType`, `Boolean`) convert one value when
-  called. Binary operations (`Addition`, …, `InequalityComparison`) take two
-  operands. `string()` is a primitive's name in the text format
-  (`int % expr -> NUMBER`, `add(1,3) % expr -> expr PLUS expr`), `primitives()`
-  lists them all, and the private `_is_binary()` tells the kinds apart.
-- `grammar.py`: `Grammar(starting_rule, rules, tokens, *, primitives=None,
-  operands=None)`, `Grammar.from_text`, `GrammarError` (with `problems`, a list
-  of `(line, message)`) and `GrammarWarning`. `grammar.primitives` maps rules to
-  primitives, and `grammar.operands` maps each binary-operation rule to its
-  1-based operand positions, defaulting to the first and last symbols. Both are
-  read-only properties over private dicts, so a `Grammar` stays picklable.
-  Value types other than `None` need exactly one symbol, and binary operations
-  at least two. The starting rule's `$` isn't counted.
-- `_text.py`: parses the text format for `Grammar.from_text`, including
-  `primitive %` and `name(i,j) %` prefixes. It collects every error, and
-  computes the warnings (unreachable and unproductive non-terminals).
-- `_item.py`, `_state.py`, `_action.py`: private LR0/LR1 items, states and
-  shift/reduce/accept actions. `LR1Item` subclasses `LR0Item` and `LR1State`
-  subclasses `LR0State`, so code typed with the LR0 classes accepts both. `State`
-  is a protocol.
-- `generator.py`: `LR0Generator`, `SLRGenerator` and `LR1Generator`. They compute
-  FIRST/FOLLOW sets (nullable symbols included), closures and gotos, and their
-  `generate()` returns a parsing table. `Generator` is generic over its item and
-  state types (`Generator[LR1Item, LR1State]`).
+- `config/`: everything that describes a grammar. Its `__init__.py` re-exports
+  `Token`, `Rule`, `Grammar`, the grammar errors and every primitive.
+  - `token.py`: `Token` (a symbol, `is_terminal`, and an optional `value`), with
+    `Token.eof()` (`$`) and `Token.null()` (`ε`). Equality and hashing ignore
+    `value`.
+  - `rule.py`: `Rule(number, lhs, *rhs)`. Equality and hashing use only the
+    symbols, not the number. A rule's primitive lives on the grammar, not on it.
+  - `primitive.py`: the primitives a rule can be tagged with. Value types
+    (`Integer`, `Float`, `String`, `NoneType`, `Boolean`) convert one value when
+    called. Binary operations (`Addition`, …, `InequalityComparison`) take two
+    operands. `string()` is a primitive's name in the text format
+    (`int % expr -> NUMBER`, `add(1,3) % expr -> expr PLUS expr`), `primitives()`
+    lists them all, and the private `_is_binary()` tells the kinds apart.
+  - `grammar.py`: `Grammar(starting_rule, rules, tokens, *, primitives=None,
+    operands=None)`, `Grammar.from_text`, `GrammarError` (with `problems`, a list
+    of `(line, message)`) and `GrammarWarning`. `grammar.primitives` maps rules to
+    primitives, and `grammar.operands` maps each binary-operation rule to its
+    1-based operand positions, defaulting to the first and last symbols. Both are
+    read-only properties over private dicts, so a `Grammar` stays picklable.
+    Value types other than `None` need exactly one symbol, and binary operations
+    at least two. The starting rule's `$` isn't counted.
+  - `_text.py`: parses the text format for `Grammar.from_text`, including
+    `primitive %` and `name(i,j) %` prefixes. It collects every error, and
+    computes the warnings (unreachable and unproductive non-terminals).
+- `generator/`: builds parsing tables. Its `__init__.py` re-exports the
+  generators.
+  - `_item.py`, `_state.py`, `_action.py`: private LR0/LR1 items, states and
+    shift/reduce/accept actions. `LR1Item` subclasses `LR0Item` and `LR1State`
+    subclasses `LR0State`, so code typed with the LR0 classes accepts both. `State`
+    is a protocol.
+  - `generator.py`: `LR0Generator`, `SLRGenerator` and `LR1Generator`. They compute
+    FIRST/FOLLOW sets (nullable symbols included), closures and gotos, and their
+    `generate()` returns a parsing table. `Generator` is generic over its item and
+    state types (`Generator[LR1Item, LR1State]`).
 - `parsing_table/`: `Entry`, `Conflict` / `ConflictType`, the `ParsingTable`
   protocol, and the `LR0ParsingTable`, `SLRParsingTable` and `LR1ParsingTable`
   classes. These have `from_entries(entries, grammar)`, `pretty_str()` and
@@ -111,8 +118,8 @@ Material's dark (`slate`) palette onto the `--sx-*` colours. The fonts in
 - **Python 3.13+** (`requires-python = ">=3.13"`). Modern syntax is fine, and
   ruff enforces it. Use PEP 695 generics (`class Generator[ItemT: LR0Item]`),
   `type` aliases, and `typing.Self`.
-- **The public API** is everything exported from `syntactes/__init__.py`,
-  `syntactes/parser/__init__.py` and `syntactes/parsing_table/__init__.py`, plus
+- **The public API** is everything exported from `syntactes/__init__.py` and
+  the `__init__.py` of `config`, `generator`, `parser` and `parsing_table`, plus
   the behaviour the README shows. Point out any breaking change and get
   agreement before making it.
 - New public names go in the relevant `__init__.py`. Modules prefixed with `_`

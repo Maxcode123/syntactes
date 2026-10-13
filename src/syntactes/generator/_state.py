@@ -1,7 +1,7 @@
 from collections.abc import Iterable
 from typing import Protocol, Self
 
-from syntactes._item import LR0Item, LR1Item
+from syntactes.generator._item import LR0Item, LR1Item
 
 
 class State(Protocol):
