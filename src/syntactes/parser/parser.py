@@ -2,7 +2,7 @@ from abc import ABC
 from collections.abc import Callable, Iterable
 from typing import cast
 
-from syntactes.config import Grammar, Rule, Token
+from syntactes.config import Grammar, Rule, Symbol
 from syntactes.config.primitive import NoneType, Primitive, _is_binary
 from syntactes.generator import LR0Generator, LR1Generator, SLRGenerator
 from syntactes.generator._action import Action, ActionType
@@ -10,6 +10,7 @@ from syntactes.generator._state import LR0State
 from syntactes.parser import (
     NotAcceptedError,
     PrimitiveError,
+    Token,
     UnexpectedTokenError,
 )
 from syntactes.parsing_table import ParsingTable
@@ -61,7 +62,8 @@ class Parser(ABC):
 
     def parse(self, stream: Iterable[Token]) -> object:
         """
-        Parses the given stream of tokens. Expects the EOF token as the last one.
+        Parses the given stream of tokens. Expects a token with the EOF symbol,
+        `Token(Symbol.eof())`, as the last one.
 
         On each reduction the rule's value becomes the `value` of the token
         pushed for the left-hand side. The value is, in order of precedence:
@@ -111,8 +113,9 @@ class Parser(ABC):
 
                 value = self._value(rule, args)
 
-                tokens.append(Token(rule.lhs.symbol, False, value))
-                shift = self._get_action(states[-1], rule.lhs)
+                lhs = Token(rule.lhs, value)
+                tokens.append(lhs)
+                shift = self._get_action(states[-1], lhs)
                 states.append(cast(LR0State, shift.actionable))
             elif action.action_type == ActionType.ACCEPT:
                 extra = next(tokens_in, None)
@@ -166,18 +169,18 @@ class Parser(ABC):
         return popped
 
     def _get_action(self, state: LR0State, token: Token) -> Action:
-        actions = self._table.get_actions(state, token)
+        actions = self._table.get_actions(state, token.symbol)
         if actions is None:
-            raise UnexpectedTokenError(token, self._expected_tokens(state))
+            raise UnexpectedTokenError(token, self._expected_symbols(state))
 
         return self._resolve_conflict(actions)
 
-    def _expected_tokens(self, state: LR0State) -> list[Token]:
+    def _expected_symbols(self, state: LR0State) -> list[Symbol]:
         """
         Returns the terminals that have an action in the given state, sorted.
         """
         row = self._table.get(state) or {}
-        return sorted(token for token in row if token.is_terminal)
+        return sorted(symbol for symbol in row if symbol.is_terminal)
 
     def _resolve_conflict(self, actions: list[Action]) -> Action:
         """

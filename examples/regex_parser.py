@@ -1,59 +1,59 @@
 from string import ascii_lowercase, ascii_uppercase
 
-from syntactes import Grammar, Rule, LR1Generator, Token
+from syntactes import Grammar, LR1Generator, Rule, Symbol
 from syntactes.parser import LR1Parser
 
-tokens = []
+symbols = []
 ns = locals()
 
 
-def token(symbol, is_terminal=True):
-    ns[symbol] = Token(symbol, is_terminal)
-    tokens.append(ns[symbol])
+def symbol(name, is_terminal=True):
+    ns[name] = Symbol(name, is_terminal)
+    symbols.append(ns[name])
 
 
-token("START", False)
-token("RE", False)
-token("RE2", False)
-EOF = Token.eof()
-tokens.append(EOF)
-NULL = Token.null()
-tokens.append(NULL)
-CONCAT = Token("·", True)
-tokens.append(CONCAT)
-VBAR = Token("|", True)
-tokens.append(VBAR)
-STAR = Token("*", True)
-tokens.append(STAR)
-PLUS = Token("+", True)
-tokens.append(PLUS)
-QMARK = Token("?", True)
-tokens.append(QMARK)
+symbol("START", False)
+symbol("RE", False)
+symbol("RE2", False)
+EOF = Symbol.eof()
+symbols.append(EOF)
+NULL = Symbol.null()
+symbols.append(NULL)
+CONCAT = Symbol("·", True)
+symbols.append(CONCAT)
+VBAR = Symbol("|", True)
+symbols.append(VBAR)
+STAR = Symbol("*", True)
+symbols.append(STAR)
+PLUS = Symbol("+", True)
+symbols.append(PLUS)
+QMARK = Symbol("?", True)
+symbols.append(QMARK)
 
 for char in ascii_lowercase + ascii_uppercase:
-    token(char)
+    symbol(char)
 
 
-zero = Token("0", True)
-tokens.append(zero)
-one = Token("1", True)
-tokens.append(one)
-two = Token("2", True)
-tokens.append(two)
-three = Token("3", True)
-tokens.append(three)
-four = Token("4", True)
-tokens.append(four)
-five = Token("5", True)
-tokens.append(five)
-six = Token("6", True)
-tokens.append(six)
-seven = Token("7", True)
-tokens.append(seven)
-eight = Token("8", True)
-tokens.append(eight)
-nine = Token("9", True)
-tokens.append(nine)
+zero = Symbol("0", True)
+symbols.append(zero)
+one = Symbol("1", True)
+symbols.append(one)
+two = Symbol("2", True)
+symbols.append(two)
+three = Symbol("3", True)
+symbols.append(three)
+four = Symbol("4", True)
+symbols.append(four)
+five = Symbol("5", True)
+symbols.append(five)
+six = Symbol("6", True)
+symbols.append(six)
+seven = Symbol("7", True)
+symbols.append(seven)
+eight = Symbol("8", True)
+symbols.append(eight)
+nine = Symbol("9", True)
+symbols.append(nine)
 
 rules = []
 
@@ -147,7 +147,7 @@ for i in {zero, one}:
 # 67. RE -> 8
 # 68. RE -> 9
 
-grammar = Grammar(rules[0], rules, tokens)
+grammar = Grammar(rules[0], rules, symbols)
 
 generator = LR1Generator(grammar)
 

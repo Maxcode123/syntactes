@@ -3,7 +3,7 @@ from .config import (
     GrammarError as GrammarError,
     GrammarWarning as GrammarWarning,
     Rule as Rule,
-    Token as Token,
+    Symbol as Symbol,
 )
 from .generator import (
     LR0Generator as LR0Generator,
@@ -14,4 +14,5 @@ from .parser import (
     LR0Parser as LR0Parser,
     LR1Parser as LR1Parser,
     SLRParser as SLRParser,
+    Token as Token,
 )

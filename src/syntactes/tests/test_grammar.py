@@ -13,72 +13,74 @@ valid_rules = (
     Rule(1, E, T, PLUS, E),
     Rule(2, T, x),
 )
-valid_tokens = {EOF, S, E, T, x, PLUS}
+valid_symbols = {EOF, S, E, T, x, PLUS}
 
 
 class TestGrammar(TestCase):
-    def subject(self, starting_rule, rules, tokens):
-        return Grammar(starting_rule, rules, tokens)
+    def subject(self, starting_rule, rules, symbols):
+        return Grammar(starting_rule, rules, symbols)
 
     def assert_grammar_error(self):
         self.assertResultRaises(GrammarError)
 
-    @args(valid_rules[0], valid_rules, valid_tokens)
+    @args(valid_rules[0], valid_rules, valid_symbols)
     def test_valid_grammar(self):
         self.assertResultIsInstance(Grammar)
 
-    @args(valid_rules[0], iter(valid_rules), valid_tokens)
+    @args(valid_rules[0], iter(valid_rules), valid_symbols)
     def test_rules_iterable_stored_as_tuple(self):
         self.assertEqual(self.result().rules, valid_rules)
 
-    @args(Rule(0, S, E, EOF), valid_rules[1:], valid_tokens)
+    @args(Rule(0, S, E, EOF), valid_rules[1:], valid_symbols)
     def test_starting_rule_not_in_rules(self):
         self.assert_grammar_error()
 
-    @args(Rule(0, S, E), (Rule(0, S, E), *valid_rules[1:]), valid_tokens)
+    @args(Rule(0, S, E), (Rule(0, S, E), *valid_rules[1:]), valid_symbols)
     def test_starting_rule_without_eof(self):
         self.assert_grammar_error()
 
     @args(
         Rule(0, S, E, EOF, EOF),
         (Rule(0, S, E, EOF, EOF), *valid_rules[1:]),
-        valid_tokens,
+        valid_symbols,
     )
     def test_eof_twice_in_starting_rule(self):
         self.assert_grammar_error()
 
-    @args(valid_rules[0], (*valid_rules, Rule(3, T, x, EOF)), valid_tokens)
+    @args(valid_rules[0], (*valid_rules, Rule(3, T, x, EOF)), valid_symbols)
     def test_eof_in_other_rule(self):
         self.assert_grammar_error()
 
-    @args(valid_rules[0], (*valid_rules, Rule(3, x, T)), valid_tokens)
+    @args(valid_rules[0], (*valid_rules, Rule(3, x, T)), valid_symbols)
     def test_terminal_lhs(self):
         self.assert_grammar_error()
 
-    @args(valid_rules[0], (*valid_rules, Rule(3, T, a)), valid_tokens)
+    @args(valid_rules[0], (*valid_rules, Rule(3, T, a)), valid_symbols)
     def test_undeclared_rhs_symbol(self):
         self.assert_grammar_error()
 
-    @args(valid_rules[0], (*valid_rules, Rule(3, A, x)), valid_tokens | {T})
+    @args(valid_rules[0], (*valid_rules, Rule(3, A, x)), valid_symbols | {T})
     def test_undeclared_lhs_symbol(self):
         self.assert_grammar_error()
 
-    @args(valid_rules[0], (*valid_rules, Rule(3, T, NULL)), valid_tokens)
+    @args(valid_rules[0], (*valid_rules, Rule(3, T, NULL)), valid_symbols)
     def test_undeclared_null_allowed(self):
         self.assertResultIsInstance(Grammar)
 
-    @args(valid_rules[0], valid_rules[:2], valid_tokens)
+    @args(valid_rules[0], valid_rules[:2], valid_symbols)
     def test_non_terminal_without_rules(self):
         self.assert_grammar_error()
 
-    @args(valid_rules[0], (*valid_rules, Rule(2, T, PLUS)), valid_tokens)
+    @args(valid_rules[0], (*valid_rules, Rule(2, T, PLUS)), valid_symbols)
     def test_duplicate_rule_numbers(self):
         self.assert_grammar_error()
 
 
 class TestGrammarPrimitives(TestCase):
     def subject(self, primitives):
-        return Grammar(valid_rules[0], valid_rules, valid_tokens, primitives=primitives)
+        return Grammar(
+            valid_rules[0], valid_rules, valid_symbols, primitives=primitives
+        )
 
     @args(None)
     def test_empty_by_default(self):
@@ -91,7 +93,7 @@ class TestGrammarPrimitives(TestCase):
     def test_copied_from_argument(self):
         primitives = {valid_rules[2]: Integer}
         grammar = Grammar(
-            valid_rules[0], valid_rules, valid_tokens, primitives=primitives
+            valid_rules[0], valid_rules, valid_symbols, primitives=primitives
         )
         primitives[valid_rules[1]] = Addition
         self.assertEqual(dict(grammar.primitives), {valid_rules[2]: Integer})
@@ -140,7 +142,7 @@ class TestGrammarPrimitives(TestCase):
 
     def test_keyword_only(self):
         with self.assertRaises(TypeError):
-            Grammar(valid_rules[0], valid_rules, valid_tokens, {})  # ty: ignore[too-many-positional-arguments]
+            Grammar(valid_rules[0], valid_rules, valid_symbols, {})  # ty: ignore[too-many-positional-arguments]
 
     @args({valid_rules[2]: Integer})
     def test_pickle_round_trip(self):
@@ -167,7 +169,7 @@ class TestGrammarOperands(TestCase):
         return Grammar(
             valid_rules[0],
             valid_rules,
-            valid_tokens,
+            valid_symbols,
             primitives=primitives,
             operands=operands,
         )
@@ -250,7 +252,7 @@ class TestGrammarErrorIsValueError(TestCase):
 
 class TestTestGrammarsAreValid(TestCase):
     def subject(self, grammar):
-        return Grammar(grammar.starting_rule, grammar.rules, grammar.tokens)
+        return Grammar(grammar.starting_rule, grammar.rules, grammar.symbols)
 
     @args(data.grammar_1)
     def test_grammar_1(self):

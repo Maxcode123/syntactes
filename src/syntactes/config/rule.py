@@ -1,4 +1,4 @@
-from syntactes.config.token import Token
+from syntactes.config.symbol import Symbol
 
 
 class Rule:
@@ -12,14 +12,14 @@ class Rule:
     primitive, if any, is in `Grammar.primitives`.
     """
 
-    def __init__(self, number: int, lhs: Token, *rhs: Token) -> None:
+    def __init__(self, number: int, lhs: Symbol, *rhs: Symbol) -> None:
         self.number = number
         self.lhs = lhs
         self.rhs = rhs
         self.rhs_len = len(rhs)
         # Rules are hashed and checked for emptiness constantly while generating
         # tables, so both are computed once.
-        null = Token.null()
+        null = Symbol.null()
         self._is_empty = all(s == null for s in rhs)
         self._hash = hash((lhs, rhs))
 
@@ -41,7 +41,7 @@ class Rule:
 
     def __str__(self) -> str:
         if self.is_empty():
-            return f"{self.lhs} -> {Token.null()}"
+            return f"{self.lhs} -> {Symbol.null()}"
 
         return f"{self.lhs} -> " + " ".join(map(str, self.rhs))
 

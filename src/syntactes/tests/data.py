@@ -1,4 +1,4 @@
-from syntactes import Grammar, Rule, Token
+from syntactes import Grammar, Rule, Symbol
 from syntactes.generator._action import Action
 from syntactes.generator._item import LR0Item, LR1Item
 from syntactes.generator._state import LR0State, LR1State
@@ -9,19 +9,19 @@ from syntactes.parsing_table import (
     SLRParsingTable,
 )
 
-EOF = Token.eof()
-S = Token("S", False)
-E = Token("E", False)
-T = Token("T", False)
-L = Token("L", False)
-C = Token("C", False)
-x = Token("x", True)
-PLUS = Token("+", True)
-LPAREN = Token("(", True)
-RPAREN = Token(")", True)
+EOF = Symbol.eof()
+S = Symbol("S", False)
+E = Symbol("E", False)
+T = Symbol("T", False)
+L = Symbol("L", False)
+C = Symbol("C", False)
+x = Symbol("x", True)
+PLUS = Symbol("+", True)
+LPAREN = Symbol("(", True)
+RPAREN = Symbol(")", True)
 
-tokens_1 = {EOF, S, E, T, x, PLUS}
-tokens_2 = {EOF, S, L, C, LPAREN, RPAREN}
+symbols_1 = {EOF, S, E, T, x, PLUS}
+symbols_2 = {EOF, S, L, C, LPAREN, RPAREN}
 
 # 1. S -> E $
 # 2. E -> T + E
@@ -34,7 +34,7 @@ rule_4_1 = Rule(3, T, x)
 
 rules_1 = (rule_1_1, rule_2_1, rule_3_1, rule_4_1)
 
-grammar_1 = Grammar(rule_1_1, rules_1, tokens_1)
+grammar_1 = Grammar(rule_1_1, rules_1, symbols_1)
 
 # 1. S -> L $
 # 2. L -> L C
@@ -49,18 +49,18 @@ rule_5_2 = Rule(4, C, LPAREN, RPAREN)
 
 rules_2 = (rule_1_2, rule_2_2, rule_3_2, rule_4_2, rule_5_2)
 
-grammar_2 = Grammar(rule_1_2, rules_2, tokens_2)
+grammar_2 = Grammar(rule_1_2, rules_2, symbols_2)
 
-A = Token("A", False)
-B = Token("B", False)
-a = Token("a", True)
-y = Token("y", True)
-NULL = Token.null()
+A = Symbol("A", False)
+B = Symbol("B", False)
+a = Symbol("a", True)
+y = Symbol("y", True)
+NULL = Symbol.null()
 
-tokens_3 = {EOF, S, E, T, x, PLUS}
-tokens_4 = {EOF, S, A, E, a, x, NULL}
-tokens_5 = {EOF, S, A, B, x, y}
-tokens_6 = {EOF, S, E, x, PLUS}
+symbols_3 = {EOF, S, E, T, x, PLUS}
+symbols_4 = {EOF, S, A, E, a, x, NULL}
+symbols_5 = {EOF, S, A, B, x, y}
+symbols_6 = {EOF, S, E, x, PLUS}
 
 # Closure without a chain of unit rules.
 # 0. S -> E $
@@ -72,7 +72,7 @@ rule_3_3 = Rule(2, T, x)
 
 rules_3 = (rule_1_3, rule_2_3, rule_3_3)
 
-grammar_3 = Grammar(rule_1_3, rules_3, tokens_3)
+grammar_3 = Grammar(rule_1_3, rules_3, symbols_3)
 
 # Nullable symbol.
 # 0. S -> A E $
@@ -86,7 +86,7 @@ rule_4_4 = Rule(3, E, x)
 
 rules_4 = (rule_1_4, rule_2_4, rule_3_4, rule_4_4)
 
-grammar_4 = Grammar(rule_1_4, rules_4, tokens_4)
+grammar_4 = Grammar(rule_1_4, rules_4, symbols_4)
 
 # Mutual tail recursion.
 # 0. S -> A $
@@ -100,7 +100,7 @@ rule_4_5 = Rule(3, B, y)
 
 rules_5 = (rule_1_5, rule_2_5, rule_3_5, rule_4_5)
 
-grammar_5 = Grammar(rule_1_5, rules_5, tokens_5)
+grammar_5 = Grammar(rule_1_5, rules_5, symbols_5)
 
 # Ambiguous, with a shift/reduce conflict.
 # 0. S -> E $
@@ -112,9 +112,9 @@ rule_3_6 = Rule(2, E, x)
 
 rules_6 = (rule_1_6, rule_2_6, rule_3_6)
 
-grammar_6 = Grammar(rule_1_6, rules_6, tokens_6)
+grammar_6 = Grammar(rule_1_6, rules_6, symbols_6)
 
-tokens_7 = {EOF, S, T, A, a, x, y, NULL}
+symbols_7 = {EOF, S, T, A, a, x, y, NULL}
 
 # Nullable symbol followed by more symbols.
 # 0. S -> T A x $
@@ -128,7 +128,7 @@ rule_4_7 = Rule(3, A, NULL)
 
 rules_7 = (rule_1_7, rule_2_7, rule_3_7, rule_4_7)
 
-grammar_7 = Grammar(rule_1_7, rules_7, tokens_7)
+grammar_7 = Grammar(rule_1_7, rules_7, symbols_7)
 
 # Same as grammar_4, with the empty rule written without ε.
 # 0. S -> A E $
@@ -139,7 +139,7 @@ rule_3_8 = Rule(2, A)
 
 rules_8 = (rule_1_4, rule_2_4, rule_3_8, rule_4_4)
 
-grammar_8 = Grammar(rule_1_4, rules_8, tokens_4)
+grammar_8 = Grammar(rule_1_4, rules_8, symbols_4)
 
 
 def lr0_state_1():

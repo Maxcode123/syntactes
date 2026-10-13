@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from syntactes.config import Rule, Token
+from syntactes.config import Rule, Symbol
 
 
 class Item(Protocol):
@@ -27,7 +27,7 @@ class LR0Item:
         return self.position == self.rule.rhs_len or self.rule.is_empty()
 
     @property
-    def after_dot(self) -> Token | None:
+    def after_dot(self) -> Symbol | None:
         """
         Returns the symbol after the dot in the current item.
         If the dot is in the last position, returns None
@@ -38,7 +38,7 @@ class LR0Item:
         return self.rule.rhs[self.position]
 
     @property
-    def before_dot(self) -> Token | None:
+    def before_dot(self) -> Symbol | None:
         """
         Returns the symbol before the dot in the current item.
         If the dot is in the first position, returns None.
@@ -52,7 +52,7 @@ class LR0Item:
         return f"<LR0Item: {self}>"
 
     def __str__(self) -> str:
-        rhs: list[Token | str] = list(self.rule.rhs)
+        rhs: list[Symbol | str] = list(self.rule.rhs)
         rhs.insert(self.position, ".")
         return f"{self.rule.lhs} -> " + " ".join(map(str, rhs))
 
@@ -68,27 +68,23 @@ class LR0Item:
 
 class LR1Item(LR0Item):
     """
-    Item of LR1 parser. Contains rule, current position in rule and lookahead token.
+    Item of LR1 parser. Contains rule, current position in rule and lookahead symbol.
     Current position is denoted with the dot '.'.
     """
 
-    def __init__(self, rule: Rule, position: int, lookahead_token: Token) -> None:
+    def __init__(self, rule: Rule, position: int, lookahead: Symbol) -> None:
         self.rule = rule
         self.position = position
-        self.lookahead_token = lookahead_token
-        self._hash = hash((rule, position, lookahead_token))
+        self.lookahead = lookahead
+        self._hash = hash((rule, position, lookahead))
 
     def __repr__(self) -> str:
         return f"<LR1Item: {self}>"
 
     def __str__(self) -> str:
-        rhs: list[Token | str] = list(self.rule.rhs)
+        rhs: list[Symbol | str] = list(self.rule.rhs)
         rhs.insert(self.position, ".")
-        return (
-            f"{self.rule.lhs} -> "
-            + " ".join(map(str, rhs))
-            + f", {self.lookahead_token}"
-        )
+        return f"{self.rule.lhs} -> " + " ".join(map(str, rhs)) + f", {self.lookahead}"
 
     def __hash__(self) -> int:
         return self._hash
@@ -100,5 +96,5 @@ class LR1Item(LR0Item):
         return (
             self.rule == other.rule
             and self.position == other.position
-            and self.lookahead_token == other.lookahead_token
+            and self.lookahead == other.lookahead
         )

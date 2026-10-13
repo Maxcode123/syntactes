@@ -1,6 +1,6 @@
 from unittest_extensions import TestCase, args
 
-from syntactes import Grammar, Rule, Token
+from syntactes import Grammar, Rule, Symbol, Token
 from syntactes.config import Integer
 from syntactes.generator._action import Action
 from syntactes.parser import (
@@ -19,6 +19,7 @@ from syntactes.tests.data import (
     PLUS,
     RPAREN,
     E,
+    T,
     a,
     grammar_1,
     grammar_3,
@@ -41,8 +42,15 @@ from syntactes.tests.data import (
     x,
 )
 
-x1 = Token("x", True, 1)
-x2 = Token("x", True, 2)
+x1 = Token(x, 1)
+x2 = Token(x, 2)
+
+
+def tokens(stream):
+    """
+    Wraps the bare symbols of a test stream in tokens without a value.
+    """
+    return [s if isinstance(s, Token) else Token(s) for s in stream]
 
 
 class TestLR0Parser(TestCase):
@@ -58,7 +66,7 @@ class TestLR0Parser(TestCase):
 
 class TestLR0ParserParse(TestLR0Parser):
     def subject(self, *stream):
-        return self.parser().parse(stream)
+        return self.parser().parse(tokens(stream))
 
     @args(x, EOF)
     def test_simple_x(self):
@@ -91,7 +99,7 @@ class TestLR0ParserParse(TestLR0Parser):
 
 class TestLR0ParserParseExecutables(TestLR0Parser):
     def subject(self, *stream):
-        self.parser().parse(stream)
+        self.parser().parse(tokens(stream))
         return self.sum
 
     def add(self, _left, _plus, _right):
@@ -113,7 +121,7 @@ class TestLR0ParserParseExecutables(TestLR0Parser):
 
 class TestLR0ParserParseExecutablesTokenValues(TestLR0Parser):
     def subject(self, *stream):
-        return self.parser().parse(stream)
+        return self.parser().parse(tokens(stream))
 
     def setUp(self):
         super().setUp()
@@ -148,7 +156,7 @@ class TestSLRParser(TestCase):
 
 class TestSLRParserParse(TestSLRParser):
     def subject(self, *stream):
-        return self.parser().parse(stream)
+        return self.parser().parse(tokens(stream))
 
     @args()
     def test_empty_stream_raises(self):
@@ -184,7 +192,7 @@ class TestLR1Parser(TestCase):
 
 class TestLR1ParserParse(TestLR1Parser):
     def subject(self, *stream):
-        return self.parser().parse(stream)
+        return self.parser().parse(tokens(stream))
 
     @args(LPAREN, RPAREN)
     def test_no_eof_raises(self):
@@ -205,7 +213,7 @@ class TestLR1ParserParse(TestLR1Parser):
 
 class TestSLRParserWithoutUnitRules(TestCase):
     def subject(self, *stream):
-        return SLRParser.from_grammar(grammar_3).parse(stream)
+        return SLRParser.from_grammar(grammar_3).parse(tokens(stream))
 
     @args(x, PLUS, x, EOF)
     def test_x_plus_x(self):
@@ -218,7 +226,7 @@ class TestSLRParserWithoutUnitRules(TestCase):
 
 class TestLR1ParserWithoutUnitRules(TestCase):
     def subject(self, *stream):
-        return LR1Parser.from_grammar(grammar_3).parse(stream)
+        return LR1Parser.from_grammar(grammar_3).parse(tokens(stream))
 
     @args(x, PLUS, x, EOF)
     def test_x_plus_x(self):
@@ -252,7 +260,7 @@ class TestSLRParserAmbiguousGrammar(TestCase):
         parser = SLRParser.from_grammar(grammar_6)
         parser.execute_on(rule_2_6)(lambda *_: reductions.append("r"))
         parser.execute_on(rule_3_6)(lambda *_: reductions.append("x"))
-        parser.parse(stream)
+        parser.parse(tokens(stream))
         return " ".join(reductions)
 
     @args(x, PLUS, x, PLUS, x, EOF)
@@ -263,11 +271,11 @@ class TestSLRParserAmbiguousGrammar(TestCase):
 class TestSLRParserParseTwice(TestSLRParser):
     def subject(self, first, second):
         try:
-            self.parser().parse(first)
+            self.parser().parse(tokens(first))
         except ParserError:
             pass
 
-        return self.parser().parse(second)
+        return self.parser().parse(tokens(second))
 
     @args([x, PLUS, x, EOF], [x, EOF])
     def test_after_valid_stream(self):
@@ -285,9 +293,9 @@ class TestSLRParserParseTwice(TestSLRParser):
 class TestSLRParserExpectedTokens(TestSLRParser):
     def subject(self, *stream):
         try:
-            self.parser().parse(stream)
+            self.parser().parse(tokens(stream))
         except UnexpectedTokenError as e:
-            return e.expected_tokens
+            return e.expected_symbols
 
     # T -> x . expects + or $
     @args(x, x, EOF)
@@ -300,11 +308,29 @@ class TestSLRParserExpectedTokens(TestSLRParser):
         self.assertResult([x])
 
 
+class TestSLRParserReceivedToken(TestSLRParser):
+    def subject(self, *stream):
+        try:
+            self.parser().parse(tokens(stream))
+        except UnexpectedTokenError as e:
+            return e
+
+    @args(x1, x2, EOF)
+    def test_received_token(self):
+        self.assertEqual(self.result().received_token, x2)
+
+    @args(x1, x2, EOF)
+    def test_message(self):
+        self.assertEqual(
+            str(self.result()), "Received token: x; expected one of: ['$', '+']"
+        )
+
+
 class TestSLRParserReduceArguments(TestSLRParser):
     def subject(self, *stream):
         self.received = []
         self.parser().execute_on(rule_2_1)(lambda *args: self.received.append(args))
-        self.parser().parse(stream)
+        self.parser().parse(tokens(stream))
         return [tuple(map(str, args)) for args in self.received]
 
     @args(x, PLUS, x, EOF)
@@ -314,7 +340,7 @@ class TestSLRParserReduceArguments(TestSLRParser):
 
 class TestSLRParserValues(TestSLRParser):
     def subject(self, *stream):
-        return self.parser().parse(stream)
+        return self.parser().parse(tokens(stream))
 
     def register_evaluator(self):
         self.parser().execute_on(rule_1_1)(lambda e: e.value)
@@ -363,11 +389,11 @@ class TestSLRParserValues(TestSLRParser):
         self.parser().execute_on(rule_4_1)(lambda x: 1 / 0)
         self.assertResultRaises(ZeroDivisionError)
 
-    @args(x1, EOF)
-    def test_grammar_tokens_are_not_mutated(self):
-        self.register_evaluator()
-        self.result()
-        self.assertIsNone(E.value)
+    @args(x1, PLUS, x2, EOF)
+    def test_callback_receives_tokens(self):
+        self.parser().execute_on(rule_2_1)(lambda *args: args)
+        self.parser().execute_on(rule_1_1)(lambda e: e.value)
+        self.assertResult((Token(T, 1), Token(PLUS), Token(E, 2)))
 
 
 class TestParsingTableGrammar(TestCase):
@@ -403,7 +429,9 @@ class TestParserExecutablesArePerParser(TestCase):
         # S -> E $ is a rule of both grammars.
         parser_1.execute_on(rule_1_1)(lambda _e: 1)
         parser_3.execute_on(rule_1_3)(lambda _e: 3)
-        return parser_1.parse([x, EOF]), parser_3.parse([x, PLUS, x, EOF])
+        return parser_1.parse(tokens([x, EOF])), parser_3.parse(
+            tokens([x, PLUS, x, EOF])
+        )
 
     def test_callbacks_do_not_leak(self):
         self.assertResult((1, 3))
@@ -412,7 +440,7 @@ class TestParserExecutablesArePerParser(TestCase):
 class TestParserExecutablesAreNotGlobal(TestCase):
     def subject(self):
         SLRParser.from_grammar(grammar_1).execute_on(rule_1_1)(lambda _e: 1)
-        return SLRParser.from_grammar(grammar_1).parse([x, EOF])
+        return SLRParser.from_grammar(grammar_1).parse(tokens([x, EOF]))
 
     def test_other_parser_unaffected(self):
         self.assertResultIs(None)
@@ -420,7 +448,7 @@ class TestParserExecutablesAreNotGlobal(TestCase):
 
 class TestParserWithEmptyRules(TestCase):
     def subject(self, parser_cls, grammar, *stream):
-        return parser_cls.from_grammar(grammar).parse(stream)
+        return parser_cls.from_grammar(grammar).parse(tokens(stream))
 
     @args(SLRParser, grammar_4, x, EOF)
     def test_slr_without_optional(self):
@@ -460,7 +488,7 @@ class TestParserEmptyRuleCallback(TestCase):
         received = []
         parser = SLRParser.from_grammar(grammar)
         parser.execute_on(rule)(lambda *args: received.append(args))
-        parser.parse([x, EOF])
+        parser.parse(tokens([x, EOF]))
         return received
 
     @args(grammar_4, rule_3_4)
@@ -472,15 +500,15 @@ class TestParserEmptyRuleCallback(TestCase):
         self.assertResult([()])
 
 
-NUMBER = Token("NUMBER", True)
-PLUS_ = Token("PLUS", True)
-MINUS = Token("MINUS", True)
-SLASH = Token("SLASH", True)
-EQ = Token("EQ", True)
+NUMBER = Symbol("NUMBER", True)
+PLUS_ = Symbol("PLUS", True)
+MINUS = Symbol("MINUS", True)
+SLASH = Symbol("SLASH", True)
+EQ = Symbol("EQ", True)
 
 
 def number(value):
-    return Token("NUMBER", True, value)
+    return Token(NUMBER, value)
 
 
 CALCULATOR = """
@@ -497,7 +525,7 @@ class TestParserPrimitives(TestCase):
         self.parser = LR1Parser.from_grammar(self.grammar)
 
     def subject(self, *stream):
-        return self.parser.parse(stream)
+        return self.parser.parse(tokens(stream))
 
     @args(number("2"), PLUS_, number("3"), EOF)
     def test_addition(self):
@@ -546,7 +574,7 @@ class TestParserPrimitives(TestCase):
 
 class TestParserPrimitiveKinds(TestCase):
     def subject(self, text, *stream):
-        return LR1Parser.from_grammar(Grammar.from_text(text)).parse(stream)
+        return LR1Parser.from_grammar(Grammar.from_text(text)).parse(tokens(stream))
 
     @args("float % v -> NUMBER\n", number("4.5"), EOF)
     def test_float(self):
@@ -596,8 +624,8 @@ class TestParserPrimitiveKinds(TestCase):
         self.assertResultIs(None)
 
 
-START = Token("S", False)
-VALUE = Token("V", False)
+START = Symbol("S", False)
+VALUE = Symbol("V", False)
 starting_rule = Rule(0, START, VALUE, EOF)
 value_rule = Rule(1, VALUE, NUMBER)
 starting_grammar = Grammar(
@@ -613,7 +641,7 @@ class TestParserStartingRulePrimitive(TestCase):
         self.parser = LR1Parser.from_grammar(starting_grammar)
 
     def subject(self, *stream):
-        return self.parser.parse(stream)
+        return self.parser.parse(tokens(stream))
 
     @args(number("5"), EOF)
     def test_applied_on_accept(self):

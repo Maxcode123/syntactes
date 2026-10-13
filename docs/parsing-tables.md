@@ -6,9 +6,9 @@ for each kind of table:
 
 | Generator | Table | Reduces on |
 |---|---|---|
-| `LR0Generator` | `LR0ParsingTable` | every token |
-| `SLRGenerator` | `SLRParsingTable` | the tokens that can follow the rule's left-hand side (its FOLLOW set) |
-| `LR1Generator` | `LR1ParsingTable` | the tokens that can follow the rule in that state (its lookaheads) |
+| `LR0Generator` | `LR0ParsingTable` | every terminal |
+| `SLRGenerator` | `SLRParsingTable` | the terminals that can follow the rule's left-hand side (its FOLLOW set) |
+| `LR1Generator` | `LR1ParsingTable` | the terminals that can follow the rule in that state (its lookaheads) |
 
 Each one handles more grammars than the one before it, and LR1 tables have the
 most states. If you only want a parser, you don't have to build the table
@@ -20,16 +20,16 @@ Pass the grammar to a generator and call `generate()`. `pretty_str()` prints the
 rules and the table:
 
 ```python
-from syntactes import Grammar, Rule, SLRGenerator, Token
+from syntactes import Grammar, Rule, SLRGenerator, Symbol
 
-EOF = Token.eof()
-S = Token("S", is_terminal=False)
-E = Token("E", False)
-T = Token("T", False)
-x = Token("x", True)
-PLUS = Token("+", True)
+EOF = Symbol.eof()
+S = Symbol("S", is_terminal=False)
+E = Symbol("E", False)
+T = Symbol("T", False)
+x = Symbol("x", True)
+PLUS = Symbol("+", True)
 
-tokens = {EOF, S, E, T, x, PLUS}
+symbols = {EOF, S, E, T, x, PLUS}
 
 # 0. S -> E $
 # 1. E -> T + E
@@ -42,7 +42,7 @@ rule_4 = Rule(3, T, x)
 
 rules = (rule_1, rule_2, rule_3, rule_4)
 
-grammar = Grammar(rule_1, rules, tokens)
+grammar = Grammar(rule_1, rules, symbols)
 
 generator = SLRGenerator(grammar)
 
@@ -86,12 +86,12 @@ the same table.
 ## Conflicts
 
 A cell with more than one action is a conflict. `conflicts()` lists them. Each
-`Conflict` has the `state`, the `token`, the `actions` and a `conflict_type`:
+`Conflict` has the `state`, the `symbol`, the `actions` and a `conflict_type`:
 `SHIFT_REDUCE`, `REDUCE_REDUCE` or `SHIFT_SHIFT`.
 
 The grammar above has a conflict as an LR0 table, but not as an SLR table. In
-state 3, LR0 reduces by `E -> T` on every token, `+` included, while SLR only
-reduces on the tokens that can follow `E`:
+state 3, LR0 reduces by `E -> T` on every terminal, `+` included, while SLR only
+reduces on the terminals that can follow `E`:
 
 ```python
 from syntactes import Grammar, LR0Generator, SLRGenerator
@@ -108,7 +108,7 @@ for generator_cls in (LR0Generator, SLRGenerator):
 
 for conflict in LR0Generator(grammar).generate().conflicts():
     actions = [str(action) for action in conflict.actions]
-    print(conflict.conflict_type.value, conflict.state.number, conflict.token, actions)
+    print(conflict.conflict_type.value, conflict.state.number, conflict.symbol, actions)
 ```
 
 ```

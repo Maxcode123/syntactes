@@ -1,6 +1,6 @@
 from unittest_extensions import TestCase, args
 
-from syntactes import Rule, Token
+from syntactes import Rule, Symbol
 from syntactes.tests._bnf import find_rule, grammar_from_bnf
 
 LIST_BNF = """
@@ -36,15 +36,15 @@ class TestGrammarFromBnf(TestCase):
 
     @args(LIST_BNF, "list")
     def test_quoted_terminal(self):
-        self.assertIn(Token(",", True), self.result().tokens)
+        self.assertIn(Symbol(",", True), self.result().symbols)
 
     @args(LIST_BNF, "list")
     def test_unquoted_terminal(self):
-        self.assertIn(Token("ITEM", True), self.result().tokens)
+        self.assertIn(Symbol("ITEM", True), self.result().symbols)
 
     @args(LIST_BNF, "list")
     def test_non_terminal(self):
-        self.assertIn(Token("items", False), self.result().tokens)
+        self.assertIn(Symbol("items", False), self.result().symbols)
 
     @args("a : b ;", "a")
     def test_undefined_non_terminal_raises(self):
@@ -64,16 +64,16 @@ class TestFindRule(TestCase):
         self.assertResult(
             Rule(
                 4,
-                Token("items", False),
-                Token("items", False),
-                Token(",", True),
-                Token("ITEM", True),
+                Symbol("items", False),
+                Symbol("items", False),
+                Symbol(",", True),
+                Symbol("ITEM", True),
             )
         )
 
     @args("list")
     def test_finds_empty_rule(self):
-        self.assertResult(Rule(1, Token("list", False)))
+        self.assertResult(Rule(1, Symbol("list", False)))
 
     @args("items", "ITEM", "ITEM")
     def test_missing_rule_raises(self):

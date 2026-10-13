@@ -1,7 +1,7 @@
 from unittest_extensions import TestCase, args
 
 from syntactes import Grammar, LR0Generator, LR1Generator, Rule, SLRGenerator
-from syntactes.tests.data import EOF, S, grammar_1, grammar_2, grammar_6, x
+from syntactes.tests.data import EOF, PLUS, S, grammar_1, grammar_2, grammar_6, x
 
 SLR_GRAMMAR_1 = """\
 GRAMMAR RULES
@@ -62,3 +62,23 @@ class TestParsingTableRuleNumbers(TestCase):
 
     def test_uses_rule_number(self):
         self.assertResult("7. S -> x $")
+
+
+class TestParsingTableConflictSymbols(TestCase):
+    def subject(self):
+        conflicts = LR0Generator(grammar_6).generate().conflicts()
+        return sorted({conflict.symbol for conflict in conflicts})
+
+    # E -> E + E . shifts and reduces on +, but only reduces on $ and x.
+    def test_conflict_symbols(self):
+        self.assertResult([PLUS])
+
+
+class TestParsingTableGetActions(TestCase):
+    def subject(self, symbol):
+        table = SLRGenerator(grammar_1).generate()
+        return table.get_actions(table.initial_state, symbol=symbol)
+
+    @args(x)
+    def test_by_symbol(self):
+        self.assertEqual(len(self.result()), 1)

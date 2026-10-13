@@ -13,6 +13,22 @@
   still exported from `syntactes`. `from syntactes.generator import
   LR1Generator` still works.
 
+- `Token` is split in two. A grammar is now made of `Symbol`s:
+  `Symbol(name, is_terminal)`, with `Symbol.eof()` and `Symbol.null()`, and a
+  `name` where `Token` had `symbol`. A parser reads `Token`s:
+  `Token(symbol, value=None)`, a terminal `Symbol` and the value it was read
+  with. So `Token("x", True, 1)` becomes `Token(Symbol("x", True), 1)`, and a
+  stream ends with `Token(Symbol.eof())`. Callbacks still receive one `Token`
+  per right-hand side symbol. Tokens are equal when their symbols and values
+  are. `Symbol` is exported from `syntactes` and `syntactes.config`, and `Token`
+  from `syntactes` and `syntactes.parser`.
+
+- The names that held grammar symbols say so: `Grammar` takes `symbols` instead
+  of `tokens`, and has `grammar.symbols`. `Entry.token` and `Conflict.token` are
+  `symbol`, `ParsingTable.get_actions(state, symbol)` takes a symbol, and
+  `UnexpectedTokenError.expected_tokens` is `expected_symbols`.
+  `Conflict.pretty_str()` says "input symbol" instead of "input token".
+
 ## 0.8.0 - 2026-10-10
 
 ### Breaking changes

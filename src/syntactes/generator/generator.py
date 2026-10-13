@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from typing import cast
 
-from syntactes.config import Grammar, Rule, Token
+from syntactes.config import Grammar, Rule, Symbol
 from syntactes.generator._action import Action
 from syntactes.generator._item import LR0Item, LR1Item
 from syntactes.generator._state import LR0State, LR1State
@@ -29,7 +29,7 @@ class Generator[ItemT: LR0Item, StateT: LR0State](ABC):
         self.grammar = grammar
         self._rules = tuple(grammar.rules)
         self._rule_indices = {rule: i for i, rule in enumerate(self._rules)}
-        self._rules_by_lhs: dict[Token, list[Rule]] = {}
+        self._rules_by_lhs: dict[Symbol, list[Rule]] = {}
         for rule in self._rules:
             self._rules_by_lhs.setdefault(rule.lhs, []).append(rule)
         self._nullable = self._compute_nullable()
@@ -41,7 +41,7 @@ class Generator[ItemT: LR0Item, StateT: LR0State](ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def goto(self, items: set[ItemT], token: Token) -> set[ItemT]:
+    def goto(self, items: set[ItemT], symbol: Symbol) -> set[ItemT]:
         raise NotImplementedError()
 
     def generate(self) -> ParsingTable:
@@ -66,7 +66,7 @@ class Generator[ItemT: LR0Item, StateT: LR0State](ABC):
         states, _ = self._create_states_and_shift_entries()
         return set(states)
 
-    def _first(self, *symbols: Token) -> set[Token]:
+    def _first(self, *symbols: Symbol) -> set[Symbol]:
         """
         Returns the FIRST set of the given sequence of symbols.
 
@@ -83,7 +83,7 @@ class Generator[ItemT: LR0Item, StateT: LR0State](ABC):
         """
         return self._first_of(symbols, self._first_sets)
 
-    def _follow(self, symbol: Token) -> set[Token]:
+    def _follow(self, symbol: Symbol) -> set[Symbol]:
         """
         Returns the FOLLOW set of the given symbol.
 
@@ -94,18 +94,18 @@ class Generator[ItemT: LR0Item, StateT: LR0State](ABC):
         return set(self._follow_sets.get(symbol, set()))
 
     @staticmethod
-    def _rhs(rule: Rule) -> tuple[Token, ...]:
+    def _rhs(rule: Rule) -> tuple[Symbol, ...]:
         """
         Returns the right-hand side of the rule without ε symbols.
         """
-        null = Token.null()
+        null = Symbol.null()
         return tuple(s for s in rule.rhs if s != null)
 
     def _first_of(
-        self, symbols: Iterable[Token], first_sets: dict[Token, set[Token]]
-    ) -> set[Token]:
-        result: set[Token] = set()
-        null = Token.null()
+        self, symbols: Iterable[Symbol], first_sets: dict[Symbol, set[Symbol]]
+    ) -> set[Symbol]:
+        result: set[Symbol] = set()
+        null = Symbol.null()
 
         for symbol in symbols:
             if symbol == null:
@@ -121,11 +121,11 @@ class Generator[ItemT: LR0Item, StateT: LR0State](ABC):
 
         return result
 
-    def _compute_nullable(self) -> set[Token]:
+    def _compute_nullable(self) -> set[Symbol]:
         """
         Computes the set of non-terminals that can derive the empty string.
         """
-        nullable: set[Token] = set()
+        nullable: set[Symbol] = set()
 
         changed = True
         while changed:
@@ -140,11 +140,13 @@ class Generator[ItemT: LR0Item, StateT: LR0State](ABC):
 
         return nullable
 
-    def _compute_first_sets(self) -> dict[Token, set[Token]]:
+    def _compute_first_sets(self) -> dict[Symbol, set[Symbol]]:
         """
         Computes the FIRST set of every non-terminal, as a fixpoint over all rules.
         """
-        first_sets: dict[Token, set[Token]] = {rule.lhs: set() for rule in self._rules}
+        first_sets: dict[Symbol, set[Symbol]] = {
+            rule.lhs: set() for rule in self._rules
+        }
 
         changed = True
         while changed:
@@ -157,11 +159,13 @@ class Generator[ItemT: LR0Item, StateT: LR0State](ABC):
 
         return first_sets
 
-    def _compute_follow_sets(self) -> dict[Token, set[Token]]:
+    def _compute_follow_sets(self) -> dict[Symbol, set[Symbol]]:
         """
         Computes the FOLLOW set of every non-terminal, as a fixpoint over all rules.
         """
-        follow_sets: dict[Token, set[Token]] = {rule.lhs: set() for rule in self._rules}
+        follow_sets: dict[Symbol, set[Symbol]] = {
+            rule.lhs: set() for rule in self._rules
+        }
 
         changed = True
         while changed:
@@ -203,13 +207,13 @@ class Generator[ItemT: LR0Item, StateT: LR0State](ABC):
         states = [initial_state]
         entries: list[Entry] = []
 
-        EOF = Token.eof()
+        EOF = Symbol.eof()
         for state in states:
             # A state's items are of the generator's item type, e.g. LR1State
             # holds LR1Items, but the shared state base class can't express that.
             items = cast(set[ItemT], state.items)
 
-            kernels: dict[Token, list[ItemT]] = {}
+            kernels: dict[Symbol, list[ItemT]] = {}
             for item in self._sorted_items(items):
                 after_dot = item.after_dot
                 if after_dot is None:
@@ -300,20 +304,20 @@ class LR0Generator(Generator[LR0Item, LR0State]):
 
         return _set
 
-    def goto(self, items: set[LR0Item], token: Token) -> set[LR0Item]:
+    def goto(self, items: set[LR0Item], symbol: Symbol) -> set[LR0Item]:
         """
         Computes and returns the GOTO set for the given set of items.
 
         The goto operation creates a set where all items have the dot past the
         given symbol.
         """
-        _set = {self._advance(item) for item in items if item.after_dot == token}
+        _set = {self._advance(item) for item in items if item.after_dot == symbol}
         return self.closure(_set)
 
     def _advance(self, item: LR0Item) -> LR0Item:
         return LR0Item(item.rule, item.position + 1)
 
-    def _get_related_items(self, symbol: Token) -> set[LR0Item]:
+    def _get_related_items(self, symbol: Symbol) -> set[LR0Item]:
         """
         Returns the initial items of the rules for the given symbol.
 
@@ -333,28 +337,28 @@ class LR0Generator(Generator[LR0Item, LR0State]):
         Computes and returns the entries for reduce actions and the accept action.
         """
         entries: list[Entry] = []
-        null = Token.null()
+        null = Symbol.null()
         terminals = sorted(
-            t for t in self.grammar.tokens if t.is_terminal and t != null
+            t for t in self.grammar.symbols if t.is_terminal and t != null
         )
 
         for state in states:
             for item in self._sorted_items(state.items):
-                if item.after_dot == Token.eof():
-                    entries.append(Entry(state, Token.eof(), Action.accept()))
+                if item.after_dot == Symbol.eof():
+                    entries.append(Entry(state, Symbol.eof(), Action.accept()))
 
                 if not item.dot_is_last():
                     continue
 
-                for token in terminals:
-                    entries.append(Entry(state, token, Action.reduce(item.rule)))
+                for terminal in terminals:
+                    entries.append(Entry(state, terminal, Action.reduce(item.rule)))
 
         return entries
 
 
 class SLRGenerator(LR0Generator):
     """
-    Generator of SLR parsing tables. Like LR0, but only reduces on the tokens
+    Generator of SLR parsing tables. Like LR0, but only reduces on the terminals
     that can follow the rule's left-hand side.
     """
 
@@ -368,21 +372,21 @@ class SLRGenerator(LR0Generator):
 
         for state in states:
             for item in self._sorted_items(state.items):
-                if item.after_dot == Token.eof():
-                    entries.append(Entry(state, Token.eof(), Action.accept()))
+                if item.after_dot == Symbol.eof():
+                    entries.append(Entry(state, Symbol.eof(), Action.accept()))
 
                 if not item.dot_is_last():
                     continue
 
-                for token in sorted(self._follow(item.rule.lhs)):
-                    entries.append(Entry(state, token, Action.reduce(item.rule)))
+                for terminal in sorted(self._follow(item.rule.lhs)):
+                    entries.append(Entry(state, terminal, Action.reduce(item.rule)))
 
         return entries
 
 
 class LR1Generator(Generator[LR1Item, LR1State]):
     """
-    Generator of LR1 parsing tables. Each item carries a lookahead token, and
+    Generator of LR1 parsing tables. Each item carries a lookahead terminal, and
     rules are only reduced on their lookaheads.
     """
 
@@ -393,7 +397,7 @@ class LR1Generator(Generator[LR1Item, LR1State]):
     def __init__(self, grammar: Grammar) -> None:
         super().__init__(grammar)
         self._related_items_cache: dict[
-            tuple[Token, tuple[Token, ...], Token], set[LR1Item]
+            tuple[Symbol, tuple[Symbol, ...], Symbol], set[LR1Item]
         ] = {}
 
     def closure(self, items: set[LR1Item]) -> set[LR1Item]:
@@ -416,39 +420,37 @@ class LR1Generator(Generator[LR1Item, LR1State]):
                 continue
 
             rest = item.rule.rhs[item.position + 1 :]
-            for new_item in self._get_related_items(
-                after_dot, rest, item.lookahead_token
-            ):
+            for new_item in self._get_related_items(after_dot, rest, item.lookahead):
                 if new_item not in _set:
                     _set.add(new_item)
                     worklist.append(new_item)
 
         return _set
 
-    def goto(self, items: set[LR1Item], token: Token) -> set[LR1Item]:
+    def goto(self, items: set[LR1Item], symbol: Symbol) -> set[LR1Item]:
         """
         Computes and returns the GOTO set for the given set of items.
 
         The goto operation creates a set where all items have the dot past the
         given symbol.
         """
-        _set = {self._advance(item) for item in items if item.after_dot == token}
+        _set = {self._advance(item) for item in items if item.after_dot == symbol}
         return self.closure(_set)
 
     def _advance(self, item: LR1Item) -> LR1Item:
-        return LR1Item(item.rule, item.position + 1, item.lookahead_token)
+        return LR1Item(item.rule, item.position + 1, item.lookahead)
 
     def _get_related_items(
-        self, symbol: Token, rest: tuple[Token, ...], lookahead_token: Token
+        self, symbol: Symbol, rest: tuple[Symbol, ...], lookahead: Symbol
     ) -> set[LR1Item]:
         """
         Returns the initial items of the rules for the given symbol, with every
-        lookahead in FIRST(rest lookahead_token).
+        lookahead in FIRST(rest lookahead).
         """
-        key = (symbol, rest, lookahead_token)
+        key = (symbol, rest, lookahead)
         related = self._related_items_cache.get(key)
         if related is None:
-            lookaheads = self._first(*rest, lookahead_token)
+            lookaheads = self._first(*rest, lookahead)
             related = {
                 LR1Item(rule, 0, lookahead)
                 for rule in self._rules_by_lhs.get(symbol, [])
@@ -466,15 +468,13 @@ class LR1Generator(Generator[LR1Item, LR1State]):
 
         for state in states:
             for item in self._sorted_items(state.items):
-                if item.after_dot == Token.eof():
-                    entries.append(Entry(state, Token.eof(), Action.accept()))
+                if item.after_dot == Symbol.eof():
+                    entries.append(Entry(state, Symbol.eof(), Action.accept()))
 
                 if not item.dot_is_last():
                     continue
 
-                entries.append(
-                    Entry(state, item.lookahead_token, Action.reduce(item.rule))
-                )
+                entries.append(Entry(state, item.lookahead, Action.reduce(item.rule)))
 
         return entries
 
@@ -486,8 +486,8 @@ class LR1Generator(Generator[LR1Item, LR1State]):
         return (
             self._rule_indices[item.rule],
             item.position,
-            item.lookahead_token.symbol,
+            item.lookahead.name,
         )
 
     def _create_initial_items(self) -> set[LR1Item]:
-        return self.closure({LR1Item(self.grammar.starting_rule, 0, Token.eof())})
+        return self.closure({LR1Item(self.grammar.starting_rule, 0, Symbol.eof())})

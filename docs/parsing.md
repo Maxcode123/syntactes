@@ -38,27 +38,29 @@ grammar raises `ValueError`.
 
 - The callback is called with one token per right-hand side symbol, in order,
   and its return value becomes the rule's value.
-- Terminals carry the `value` they were created with, such as
-  `Token("x", True, 42)`.
+- Each token has a `symbol` and a `value`. A terminal's token is the one
+  from the stream, with the value it was read with, such as `Token(x, 42)`.
+  A non-terminal's token holds the value computed for its rule.
 - An empty rule's callback is called with no arguments.
 - A callback wins over the rule's primitive.
 - Exceptions raised in callbacks propagate out of `parse()` unchanged.
 
-`parse()` takes any iterable of tokens, a generator included, and expects `$`
-(`Token.eof()`) as the last one.
+`parse()` takes any iterable of `Token`s, a generator included. A token is a
+terminal `Symbol` of the grammar and a `value`, which defaults to `None`.
+`parse()` expects a `$` token, `Token(Symbol.eof())`, as the last one.
 
 ```python
-from syntactes import Grammar, Rule, Token
+from syntactes import Grammar, Rule, Symbol, Token
 from syntactes.parser import ParserError, SLRParser
 
-EOF = Token.eof()
-S = Token("S", is_terminal=False)
-E = Token("E", False)
-T = Token("T", False)
-x = Token("x", True)
-PLUS = Token("+", True)
+EOF = Symbol.eof()
+S = Symbol("S", is_terminal=False)
+E = Symbol("E", False)
+T = Symbol("T", False)
+x = Symbol("x", True)
+PLUS = Symbol("+", True)
 
-tokens = {EOF, S, E, T, x, PLUS}
+symbols = {EOF, S, E, T, x, PLUS}
 
 # 0. S -> E $
 # 1. E -> T + E
@@ -71,7 +73,7 @@ rule_4 = Rule(3, T, x)
 
 rules = (rule_1, rule_2, rule_3, rule_4)
 
-grammar = Grammar(rule_1, rules, tokens)
+grammar = Grammar(rule_1, rules, symbols)
 
 parser = SLRParser.from_grammar(grammar)
 
@@ -103,15 +105,17 @@ def number(x_token):
 
 
 def num(value):
-    return Token("x", True, value)
+    return Token(x, value)
 
+
+plus, eof = Token(PLUS), Token(EOF)
 
 print("Parsing stream: 1 + 2 + 3 $\n")
-print("result:", parser.parse([num(1), PLUS, num(2), PLUS, num(3), EOF]))
+print("result:", parser.parse([num(1), plus, num(2), plus, num(3), eof]))
 
 print("\nParsing stream: 1 + $\n")
 try:
-    parser.parse([num(1), PLUS, EOF])
+    parser.parse([num(1), plus, eof])
 except ParserError as e:
     print("ParserError:", e)
 ```
@@ -142,7 +146,7 @@ If a primitive raises, `parse()` raises a `PrimitiveError` naming the rule, with
 the original exception as its `__cause__`.
 
 ```python
-from syntactes import Grammar, Token
+from syntactes import Grammar, Symbol, Token
 from syntactes.parser import LR1Parser, PrimitiveError
 
 grammar = Grammar.from_text("""
@@ -170,8 +174,8 @@ KINDS = {"+": "PLUS", "-": "MINUS", "*": "TIMES", "(": "LPAREN", ")": "RPAREN"}
 
 def lex(text):
     for word in text.split():
-        yield Token(KINDS.get(word, "NUMBER"), True, word)
-    yield Token.eof()
+        yield Token(Symbol(KINDS.get(word, "NUMBER"), True), word)
+    yield Token(Symbol.eof())
 
 
 print(parser.parse(lex("2 * ( 7 - 2 - 1 ) + 3")))
@@ -196,7 +200,7 @@ a callback to keep the value of `expr`.
 
 - `UnexpectedTokenError` if a token has no action in the current state, or if
   tokens follow the `$` that completed the parse. Its `received_token` is the
-  token, and its `expected_tokens` holds the terminals that would have been
+  token, and its `expected_symbols` holds the terminals that would have been
   accepted, sorted.
 - `NotAcceptedError` if the stream ends before the parser accepts, for example
   when the `$` is missing.
@@ -213,7 +217,7 @@ For example, `expr -> expr PLUS expr` is ambiguous, and shifting makes `PLUS`
 right-associative:
 
 ```python
-from syntactes import Grammar, Token
+from syntactes import Grammar, Symbol, Token
 from syntactes.parser import SLRParser
 
 grammar = Grammar.from_text("""
@@ -240,9 +244,9 @@ def on_x(x):
     return x.value
 
 
-PLUS = Token("PLUS", True)
-stream = [Token("X", True, "a"), PLUS, Token("X", True, "b"), PLUS, Token("X", True, "c")]
-print(parser.parse([*stream, Token.eof()]))  # (a + (b + c))
+PLUS, X = Token(Symbol("PLUS", True)), Symbol("X", True)
+stream = [Token(X, "a"), PLUS, Token(X, "b"), PLUS, Token(X, "c")]
+print(parser.parse([*stream, Token(Symbol.eof())]))  # (a + (b + c))
 ```
 
 To get left-associativity, write the grammar that way instead:

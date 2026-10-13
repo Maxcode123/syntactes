@@ -1,5 +1,7 @@
 # isort: skip_file
-# Import order matters: `parser` imports the exceptions from `syntactes.parser`.
+# Import order matters: `parser` imports the token and the exceptions from
+# `syntactes.parser`.
+from .token import Token as Token
 from .exception import (
     NotAcceptedError as NotAcceptedError,
     ParserError as ParserError,

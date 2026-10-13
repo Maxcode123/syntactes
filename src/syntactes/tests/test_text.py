@@ -2,7 +2,7 @@ import warnings
 
 from unittest_extensions import TestCase, args
 
-from syntactes import Grammar, GrammarError, GrammarWarning, Rule, Token
+from syntactes import Grammar, GrammarError, GrammarWarning, Rule, Symbol
 from syntactes.config import (
     Addition,
     Boolean,
@@ -13,15 +13,15 @@ from syntactes.config import (
     String,
 )
 
-EOF = Token.eof()
-START = Token("<start>", False)
-expr = Token("expr", False)
-term = Token("term", False)
-items = Token("items", False)
-PLUS = Token("PLUS", True)
-NUMBER = Token("NUMBER", True)
-COMMA = Token("COMMA", True)
-EQ = Token("EQ", True)
+EOF = Symbol.eof()
+START = Symbol("<start>", False)
+expr = Symbol("expr", False)
+term = Symbol("term", False)
+items = Symbol("items", False)
+PLUS = Symbol("PLUS", True)
+NUMBER = Symbol("NUMBER", True)
+COMMA = Symbol("COMMA", True)
+EQ = Symbol("EQ", True)
 
 EXPR_TEXT = """\
 # Sums of numbers.
@@ -57,8 +57,8 @@ class TestFromText(TestCase):
         self.assertEqual([rule.number for rule in self.result().rules], [0, 1, 2, 3])
 
     @args(EXPR_TEXT)
-    def test_tokens(self):
-        self.assertEqual(self.result().tokens, {START, EOF, expr, term, PLUS, NUMBER})
+    def test_symbols(self):
+        self.assertEqual(self.result().symbols, {START, EOF, expr, term, PLUS, NUMBER})
 
     @args(EXPR_TEXT)
     def test_terminals(self):
@@ -92,8 +92,8 @@ class TestFromText(TestCase):
         self.assertEqual((rule.number, rule.lhs, rule.rhs), (2, items, ()))
 
     @args("items -> items COMMA NUMBER\nitems -> ε\n")
-    def test_null_not_in_tokens(self):
-        self.assertNotIn(Token.null(), self.result().tokens)
+    def test_null_not_in_symbols(self):
+        self.assertNotIn(Symbol.null(), self.result().symbols)
 
     @args("expr -> term\nterm -> NUMBER\n")
     def test_first_lhs_is_start_symbol(self):

@@ -3,7 +3,7 @@ from collections.abc import Iterable, Mapping
 from types import MappingProxyType
 from typing import Self
 
-from syntactes.config import Rule, Token, _text
+from syntactes.config import Rule, Symbol, _text
 from syntactes.config.primitive import NoneType, Primitive, _is_binary, primitives
 
 
@@ -48,24 +48,24 @@ class Grammar:
     """
     A grammar is a set of rules that describe a language.
 
-    The only valid 'words' of the language are the given tokens.
+    The only valid 'words' of the language are the given symbols.
     """
 
     def __init__(
         self,
         starting_rule: Rule,
         rules: Iterable[Rule],
-        tokens: set[Token],
+        symbols: set[Symbol],
         *,
         primitives: Mapping[Rule, Primitive] | None = None,
         operands: Mapping[Rule, tuple[int, int]] | None = None,
     ) -> None:
         """
         `starting_rule` should also be included in `rules`, and end with the EOF
-        token.
+        symbol.
 
         `primitives` maps some of the rules to a primitive from
-        `syntactes.primitive`. A rule is matched by its symbols, not its number.
+        `syntactes.config`. A rule is matched by its symbols, not its number.
 
         `operands` maps rules whose primitive is a binary operation to the
         1-based positions of their two operands among the right-hand side
@@ -76,7 +76,7 @@ class Grammar:
         """
         self.starting_rule = starting_rule
         self.rules = tuple(rules)
-        self.tokens = tokens
+        self.symbols = symbols
         self._primitives = dict(primitives or {})
         self._operands = dict(operands or {})
 
@@ -85,7 +85,7 @@ class Grammar:
     @property
     def primitives(self) -> Mapping[Rule, Primitive]:
         """
-        The rules' primitives, from `syntactes.primitive`. It's read-only, and
+        The rules' primitives, from `syntactes.config`. It's read-only, and
         rules without a primitive aren't in it.
         """
         # Stored as a dict and wrapped on access, because a mappingproxy can't
@@ -134,28 +134,28 @@ class Grammar:
         for line, message in parsed.warnings:
             warnings.warn(GrammarWarning(line, message), stacklevel=2)
 
-        tokens = {Token.eof()}
+        symbols = {Symbol.eof()}
         for rule in parsed.rules:
-            tokens.add(rule.lhs)
-            tokens.update(rule.rhs)
+            symbols.add(rule.lhs)
+            symbols.update(rule.rhs)
 
         return cls(
             parsed.rules[0],
             parsed.rules,
-            tokens,
+            symbols,
             primitives=parsed.primitives,
             operands=parsed.operands,
         )
 
-    def terminals(self) -> set[Token]:
+    def terminals(self) -> set[Symbol]:
         """
         Returns the terminals of the grammar, except `$` and `ε`.
         """
-        special = {Token.eof(), Token.null()}
-        return {t for t in self.tokens if t.is_terminal and t not in special}
+        special = {Symbol.eof(), Symbol.null()}
+        return {t for t in self.symbols if t.is_terminal and t not in special}
 
     def _validate(self) -> None:
-        EOF, NULL = Token.eof(), Token.null()
+        EOF, NULL = Symbol.eof(), Symbol.null()
 
         if self.starting_rule not in self.rules:
             raise GrammarError(
@@ -188,9 +188,9 @@ class Grammar:
                 if symbol == NULL:
                     continue
 
-                if symbol not in self.tokens:
+                if symbol not in self.symbols:
                     raise GrammarError(
-                        f"Symbol '{symbol}' of rule '{rule}' is not in the tokens."
+                        f"Symbol '{symbol}' of rule '{rule}' is not in the symbols."
                     )
 
                 if not symbol.is_terminal and symbol not in lhs_symbols:
@@ -206,7 +206,7 @@ class Grammar:
             if primitive not in valid:
                 raise GrammarError(
                     f"Primitive {primitive!r} of rule '{rule}' is not one of "
-                    "syntactes.primitive.primitives()."
+                    "syntactes.config.primitives()."
                 )
 
         for rule in self._operands:
@@ -251,7 +251,7 @@ class Grammar:
 
     def _symbol_count(self, rule: Rule) -> int:
         """
-        The number of tokens a primitive of `rule` gets: none for an empty rule,
+        The number of values a primitive of `rule` gets: none for an empty rule,
         and the starting rule's trailing EOF doesn't count.
         """
         if rule.is_empty():

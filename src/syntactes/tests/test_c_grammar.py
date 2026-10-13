@@ -106,7 +106,7 @@ class TestCParsingTable(TestCase):
     # The only conflict of the ANSI C grammar is the dangling else.
     def test_only_dangling_else_conflicts(self):
         self.assertSetEqual(
-            {(c.token.symbol, c.conflict_type) for c in self.result()},
+            {(c.symbol.name, c.conflict_type) for c in self.result()},
             {("ELSE", ConflictType.SHIFT_REDUCE)},
         )
 
@@ -240,7 +240,7 @@ class TestCStatements(TestCase):
                     *(
                         t.value
                         for t in tokens
-                        if t.symbol in ("expression", "statement")
+                        if t.symbol.name in ("expression", "statement")
                     )
                 )
             )

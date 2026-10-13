@@ -1,6 +1,6 @@
 # syntactes
 
-A simple Python parser generator. You give it a grammar (tokens and rules), and
+A simple Python parser generator. You give it a grammar (symbols and rules), and
 it builds LR0, SLR or LR1 parsing tables and parsers that run user callbacks on
 each reduction. It's a library published on PyPI. Docs are at
 https://maximosnikiforakis.gr/syntactes/.
@@ -45,10 +45,10 @@ Tooling notes:
 All code lives in `src/syntactes/`:
 
 - `config/`: everything that describes a grammar. Its `__init__.py` re-exports
-  `Token`, `Rule`, `Grammar`, the grammar errors and every primitive.
-  - `token.py`: `Token` (a symbol, `is_terminal`, and an optional `value`), with
-    `Token.eof()` (`$`) and `Token.null()` (`ε`). Equality and hashing ignore
-    `value`.
+  `Symbol`, `Rule`, `Grammar`, the grammar errors and every primitive.
+  - `symbol.py`: `Symbol(name, is_terminal)`, a grammar symbol, with
+    `Symbol.eof()` (`$`) and `Symbol.null()` (`ε`). It has no value: values
+    live on `Token`s.
   - `rule.py`: `Rule(number, lhs, *rhs)`. Equality and hashing use only the
     symbols, not the number. A rule's primitive lives on the grammar, not on it.
   - `primitive.py`: the primitives a rule can be tagged with. Value types
@@ -57,7 +57,7 @@ All code lives in `src/syntactes/`:
     operands. `string()` is a primitive's name in the text format
     (`int % expr -> NUMBER`, `add(1,3) % expr -> expr PLUS expr`), `primitives()`
     lists them all, and the private `_is_binary()` tells the kinds apart.
-  - `grammar.py`: `Grammar(starting_rule, rules, tokens, *, primitives=None,
+  - `grammar.py`: `Grammar(starting_rule, rules, symbols, *, primitives=None,
     operands=None)`, `Grammar.from_text`, `GrammarError` (with `problems`, a list
     of `(line, message)`) and `GrammarWarning`. `grammar.primitives` maps rules to
     primitives, and `grammar.operands` maps each binary-operation rule to its
@@ -83,6 +83,9 @@ All code lives in `src/syntactes/`:
   classes. These have `from_entries(entries, grammar)`, `pretty_str()` and
   `conflicts()`. The subclasses only change the header.
 - `parser/`:
+  - `token.py`: `Token(symbol, value=None)`, a token of the parser's input: a
+    terminal `Symbol` and the value it was read with. Equality uses the symbol
+    and the value, and hashing only the symbol.
   - `parser.py`: `LR0Parser`, `SLRParser` and `LR1Parser`, built from a table or
     with `from_grammar()`. `@parser.execute_on(rule)` registers a callback on
     that parser. On each reduction, the rule's value becomes the `value` of the

@@ -11,7 +11,7 @@ import io
 import tokenize as _tokenize
 from collections.abc import Callable, Iterator
 
-from syntactes import LR1Generator, Rule, Token
+from syntactes import LR1Generator, Rule, Symbol, Token
 from syntactes.parser import LR1Parser
 from syntactes.parsing_table import ParsingTable
 from syntactes.tests._bnf import grammar_from_bnf
@@ -350,9 +350,9 @@ def tokenize(source: str) -> Iterator[Token]:
         else:
             raise ValueError(f"Unsupported token {info}.")
 
-        yield Token(symbol, True, info.string)
+        yield Token(Symbol(symbol, True), info.string)
 
-    yield Token.eof()
+    yield Token(Symbol.eof())
 
 
 # Rules whose alternatives of more than one symbol are expressions that can be
@@ -384,7 +384,7 @@ def source_parser() -> LR1Parser:
 
 
 def _source_callback(rule: Rule) -> Callable[..., str]:
-    lhs = rule.lhs.symbol
+    lhs = rule.lhs.name
     if lhs == "<start>":
         return lambda file_input: file_input.value.replace(_STRING_NEWLINE, "\n")
 
@@ -401,14 +401,14 @@ def _source_callback(rule: Rule) -> Callable[..., str]:
 
 
 def _text(token: Token) -> str:
-    if token.symbol == "NEWLINE":
+    if token.symbol.name == "NEWLINE":
         return "\n"
 
     value = token.value
-    if value is None or token.symbol in ("INDENT", "DEDENT"):
+    if value is None or token.symbol.name in ("INDENT", "DEDENT"):
         return ""
 
-    if token.symbol == "STRING":
+    if token.symbol.name == "STRING":
         return value.replace("\n", _STRING_NEWLINE)
 
     return value

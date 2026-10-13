@@ -13,7 +13,7 @@ import functools
 import re
 from collections.abc import Callable, Collection, Iterator
 
-from syntactes import LR1Generator, Rule, Token
+from syntactes import LR1Generator, Rule, Symbol, Token
 from syntactes.parser import LR1Parser
 from syntactes.parsing_table import ParsingTable
 from syntactes.tests._bnf import grammar_from_bnf
@@ -430,9 +430,9 @@ def tokenize(source: str, typedef_names: Collection[str] = ()) -> Iterator[Token
             symbol = _PUNCTUATORS[lexeme]
 
         previous = symbol
-        yield Token(symbol, True, lexeme)
+        yield Token(Symbol(symbol, True), lexeme)
 
-    yield Token.eof()
+    yield Token(Symbol.eof())
 
 
 def source_parser() -> LR1Parser:
@@ -450,7 +450,7 @@ def source_parser() -> LR1Parser:
 
 
 def _source_callback(rule: Rule) -> Callable[..., str]:
-    lhs = rule.lhs.symbol
+    lhs = rule.lhs.name
     if lhs == "primary_expression" and rule.rhs_len == 3:
         return lambda _left, expression, _right: expression.value
 

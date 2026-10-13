@@ -20,7 +20,7 @@ title: What is syntactes?
 Greek _συντάκτης_ (/sin'daktis/), meaning editor or composer.
 
 - **Grammars as text or as objects.** Write one `lhs -> symbols` rule per line,
-  or build the `Token`s and `Rule`s yourself. See [Grammars](grammars.md).
+  or build the `Symbol`s and `Rule`s yourself. See [Grammars](grammars.md).
 - **Three kinds of tables.** LR0, SLR and LR1 generators, with a readable
   printout and a list of conflicts. See [Parsing tables](parsing-tables.md).
 - **Callbacks on every reduction.** Each rule's callback gets one token per
@@ -35,7 +35,7 @@ Greek _συντάκτης_ (/sin'daktis/), meaning editor or composer.
 Here's a calculator in a few lines:
 
 ```python
-from syntactes import Grammar, Token
+from syntactes import Grammar, Symbol, Token
 from syntactes.parser import LR1Parser
 
 grammar = Grammar.from_text("""
@@ -74,15 +74,18 @@ def on_number(number):
     return number.value
 
 
+PLUS, TIMES, NUMBER = (Symbol(name, True) for name in ("PLUS", "TIMES", "NUMBER"))
+
+
 def lex(text):
     for word in text.split():
         if word == "+":
-            yield Token("PLUS", True)
+            yield Token(PLUS)
         elif word == "*":
-            yield Token("TIMES", True)
+            yield Token(TIMES)
         else:
-            yield Token("NUMBER", True, int(word))
-    yield Token.eof()
+            yield Token(NUMBER, int(word))
+    yield Token(Symbol.eof())
 
 
 print(parser.parse(lex("2 * 3 + 4")))  # 10

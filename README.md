@@ -32,16 +32,16 @@ The name is derived from Greek _συντάκτης_ (/sin'daktis/) meaning edito
 
 ### Creating a parsing table
 ```py
-from syntactes import Grammar, Rule, SLRGenerator, Token
+from syntactes import Grammar, Rule, SLRGenerator, Symbol
 
-EOF = Token.eof()
-S = Token("S", is_terminal=False)
-E = Token("E", False)
-T = Token("T", False)
-x = Token("x", True)
-PLUS = Token("+", True)
+EOF = Symbol.eof()
+S = Symbol("S", is_terminal=False)
+E = Symbol("E", False)
+T = Symbol("T", False)
+x = Symbol("x", True)
+PLUS = Symbol("+", True)
 
-tokens = {EOF, S, E, T, x, PLUS}
+symbols = {EOF, S, E, T, x, PLUS}
 
 # 0. S -> E $
 # 1. E -> T + E
@@ -54,7 +54,7 @@ rule_4 = Rule(3, T, x)
 
 rules = (rule_1, rule_2, rule_3, rule_4)
 
-grammar = Grammar(rule_1, rules, tokens)
+grammar = Grammar(rule_1, rules, symbols)
 
 generator = SLRGenerator(grammar)
 
@@ -94,17 +94,17 @@ SLR PARSING TABLE
 ### Parsing
 
 ```py
-from syntactes import Grammar, Rule, Token
+from syntactes import Grammar, Rule, Symbol, Token
 from syntactes.parser import ParserError, SLRParser
 
-EOF = Token.eof()
-S = Token("S", is_terminal=False)
-E = Token("E", False)
-T = Token("T", False)
-x = Token("x", True)
-PLUS = Token("+", True)
+EOF = Symbol.eof()
+S = Symbol("S", is_terminal=False)
+E = Symbol("E", False)
+T = Symbol("T", False)
+x = Symbol("x", True)
+PLUS = Symbol("+", True)
 
-tokens = {EOF, S, E, T, x, PLUS}
+symbols = {EOF, S, E, T, x, PLUS}
 
 # 0. S -> E $
 # 1. E -> T + E
@@ -117,7 +117,7 @@ rule_4 = Rule(3, T, x)
 
 rules = (rule_1, rule_2, rule_3, rule_4)
 
-grammar = Grammar(rule_1, rules, tokens)
+grammar = Grammar(rule_1, rules, symbols)
 
 parser = SLRParser.from_grammar(grammar)
 
@@ -149,15 +149,17 @@ def number(x_token):
 
 
 def num(value):
-    return Token("x", True, value)
+    return Token(x, value)
 
+
+plus, eof = Token(PLUS), Token(EOF)
 
 print("Parsing stream: 1 + 2 + 3 $\n")
-print("result:", parser.parse([num(1), PLUS, num(2), PLUS, num(3), EOF]))
+print("result:", parser.parse([num(1), plus, num(2), plus, num(3), eof]))
 
 print("\nParsing stream: 1 + $\n")
 try:
-    parser.parse([num(1), PLUS, EOF])
+    parser.parse([num(1), plus, eof])
 except ParserError as e:
     print("ParserError:", e)
 ```
@@ -180,7 +182,7 @@ ParserError: Received token: $; expected one of: ['x']
 The [documentation](https://maximosnikiforakis.gr/syntactes/) covers the rest:
 
 * [Grammars](https://maximosnikiforakis.gr/syntactes/grammars/): writing grammars as text with
-  `Grammar.from_text`, building them from `Token`s and `Rule`s, empty rules,
+  `Grammar.from_text`, building them from `Symbol`s and `Rule`s, empty rules,
   and the errors and warnings for malformed grammars.
 * [Parsing tables](https://maximosnikiforakis.gr/syntactes/parsing-tables/): the LR0, SLR and LR1
   generators, reading `pretty_str()`, and finding conflicts.

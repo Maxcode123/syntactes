@@ -11,13 +11,14 @@ class ParserError(Exception):
 class UnexpectedTokenError(ParserError):
     """
     A token was received that does not map to an action. The stream of tokens
-    is syntactically invalid.
+    is syntactically invalid. The token is `received_token`, and the terminals
+    that would have been valid are `expected_symbols`.
     """
 
-    def __init__(self, received_token, expected_tokens):
+    def __init__(self, received_token, expected_symbols):
         self.received_token = received_token
-        self.expected_tokens = expected_tokens
-        msg = f"Received token: {received_token}; expected one of: {[str(e) for e in expected_tokens]}"
+        self.expected_symbols = expected_symbols
+        msg = f"Received token: {received_token}; expected one of: {[str(e) for e in expected_symbols]}"
         super().__init__(msg)
 
 

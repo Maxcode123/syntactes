@@ -10,7 +10,7 @@ terminal. An empty right-hand side, or a lone `ε`, is an empty rule.
 import re
 from dataclasses import dataclass, field
 
-from syntactes.config import Rule, Token
+from syntactes.config import Rule, Symbol
 from syntactes.config.primitive import (
     NoneType,
     Primitive,
@@ -63,8 +63,8 @@ def parse(text: str) -> ParsedText:
 
     non_terminals = {line.lhs for line in lines}
 
-    def token(symbol: str) -> Token:
-        return Token(symbol, symbol not in non_terminals)
+    def symbol(name: str) -> Symbol:
+        return Symbol(name, name not in non_terminals)
 
     def primitive(raw: str | None) -> Primitive | None:
         if not raw or len(raw) == 0:
@@ -76,11 +76,11 @@ def parse(text: str) -> ParsedText:
 
         return None
 
-    start = Token(lines[0].lhs, False)
-    result.rules.append(Rule(0, Token(START_SYMBOL, False), start, Token.eof()))
+    start = Symbol(lines[0].lhs, False)
+    result.rules.append(Rule(0, Symbol(START_SYMBOL, False), start, Symbol.eof()))
     for number, line in enumerate(lines, start=1):
         prim = primitive(line.primitive)
-        rule = Rule(number, token(line.lhs), *map(token, line.rhs))
+        rule = Rule(number, symbol(line.lhs), *map(symbol, line.rhs))
         result.rules.append(rule)
         if prim is not None:
             result.primitives[rule] = prim
@@ -119,7 +119,7 @@ def _lines(text: str, errors: list[tuple[int | None, str]]) -> list[_Line]:
             errors.append((number, error))
             continue
 
-        if rhs == [Token.null().symbol]:
+        if rhs == [Symbol.null().name]:
             rhs = []
 
         key = (lhs, tuple(rhs))
@@ -157,7 +157,7 @@ def _line_error(
     if percent and not primitive:
         return f"expected 'primitive {_PERCENT} lhs {_ARROW} symbols'"
 
-    null, eof = Token.null().symbol, Token.eof().symbol
+    null, eof = Symbol.null().name, Symbol.eof().name
     for symbol in rhs:
         if symbol == eof:
             return f"'{eof}' is reserved for the end of the input"
@@ -206,7 +206,7 @@ def _primitive_error(raw: str, rhs: list[str]) -> str | None:
         return f"invalid primitive {name} expected one of {', '.join(by_name)}"
 
     primitive = by_name[name]
-    count = 0 if rhs == [Token.null().symbol] else len(rhs)
+    count = 0 if rhs == [Symbol.null().name] else len(rhs)
     if not _is_binary(primitive):
         if inside is not None:
             return f"{name} takes no operand positions"
@@ -238,9 +238,9 @@ def _primitive_error(raw: str, rhs: list[str]) -> str | None:
 
 
 def _warnings(
-    lines: list[_Line], rules: list[Rule], start: Token
+    lines: list[_Line], rules: list[Rule], start: Symbol
 ) -> list[tuple[int, str]]:
-    first_lines: dict[Token, int] = {}
+    first_lines: dict[Symbol, int] = {}
     for line, rule in zip(lines, rules, strict=True):
         first_lines.setdefault(rule.lhs, line.number)
 
@@ -264,7 +264,7 @@ def _warnings(
     return found
 
 
-def _reachable(rules: list[Rule], start: Token) -> set[Token]:
+def _reachable(rules: list[Rule], start: Symbol) -> set[Symbol]:
     reachable = {start}
     pending = [start]
     while pending:
@@ -281,8 +281,8 @@ def _reachable(rules: list[Rule], start: Token) -> set[Token]:
     return reachable
 
 
-def _productive(rules: list[Rule]) -> set[Token]:
-    productive: set[Token] = set()
+def _productive(rules: list[Rule]) -> set[Symbol]:
+    productive: set[Symbol] = set()
     changed = True
     while changed:
         changed = False

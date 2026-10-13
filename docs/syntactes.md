@@ -1,4 +1,4 @@
-::: syntactes.config.token
+::: syntactes.config.symbol
 
 ::: syntactes.config.rule
 

@@ -1,7 +1,7 @@
 # isort: skip_file
 # Import order matters: later modules import the earlier ones from
 # `syntactes.config`.
-from .token import Token as Token
+from .symbol import Symbol as Symbol
 from .rule import Rule as Rule
 from .primitive import (
     Primitive as Primitive,

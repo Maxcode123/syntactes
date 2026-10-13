@@ -1,6 +1,6 @@
 from enum import Enum
 
-from syntactes.config import Token
+from syntactes.config import Symbol
 from syntactes.generator._action import Action, ActionType
 from syntactes.generator._state import LR0State
 
@@ -19,12 +19,12 @@ class ConflictType(Enum):
 class Conflict:
     """
     A cell of a parsing table with more than one action: the `actions` for
-    `token` in `state`.
+    `symbol` in `state`.
     """
 
-    def __init__(self, state: LR0State, token: Token, actions: list[Action]) -> None:
+    def __init__(self, state: LR0State, symbol: Symbol, actions: list[Action]) -> None:
         self.state = state
-        self.token = token
+        self.symbol = symbol
         self.actions = actions
         self._conflict_type = None
 
@@ -33,7 +33,7 @@ class Conflict:
         Returns a pretty-formatted string with conflict details.
         """
         string = f"{self.conflict_type.value} conflict in state {self.state}\n"
-        string += f"Available actions on input token '{self.token}':\n"
+        string += f"Available actions on input symbol '{self.symbol}':\n"
         for action in self.actions:
             if action.action_type == ActionType.SHIFT:
                 string += f"shift to {action.actionable}\n"
@@ -75,4 +75,4 @@ class Conflict:
         return f"<Conflict: {self!s}>"
 
     def __str__(self) -> str:
-        return f"{self.state}, {self.token}, {self.actions}"
+        return f"{self.state}, {self.symbol}, {self.actions}"

@@ -2,7 +2,7 @@
 
 A grammar is a set of rules that describe a language. Each rule breaks a
 non-terminal symbol down into other symbols. You can write the grammar as text,
-or build it from `Token` and `Rule` objects.
+or build it from `Symbol` and `Rule` objects.
 
 ## Writing a grammar as text
 
@@ -221,24 +221,25 @@ for warning in caught:
 
 ## Building a grammar from objects
 
-A `Token` is a symbol, and is either a terminal or a non-terminal. `Token.eof()`
-is the end of the input (`$`), and `Token.null()` is the empty string (`ε`).
+A `Symbol` has a name, and is either a terminal or a non-terminal.
+`Symbol.eof()` is the end of the input (`$`), and `Symbol.null()` is the empty
+string (`ε`).
 
 A `Rule` takes a number, its left-hand side and its right-hand side symbols.
 A `Grammar` takes the starting rule, every rule (the starting rule included)
-and the set of tokens.
+and the set of symbols.
 
 ```python
-from syntactes import Grammar, Rule, Token
+from syntactes import Grammar, Rule, Symbol
 
-EOF = Token.eof()
-S = Token("S", is_terminal=False)
-E = Token("E", False)
-T = Token("T", False)
-x = Token("x", True)
-PLUS = Token("+", True)
+EOF = Symbol.eof()
+S = Symbol("S", is_terminal=False)
+E = Symbol("E", False)
+T = Symbol("T", False)
+x = Symbol("x", True)
+PLUS = Symbol("+", True)
 
-tokens = {EOF, S, E, T, x, PLUS}
+symbols = {EOF, S, E, T, x, PLUS}
 
 # 0. S -> E $
 # 1. E -> T + E
@@ -251,15 +252,15 @@ rule_4 = Rule(3, T, x)
 
 rules = (rule_1, rule_2, rule_3, rule_4)
 
-grammar = Grammar(rule_1, rules, tokens)
+grammar = Grammar(rule_1, rules, symbols)
 ```
 
 An empty rule can be written as `Rule(n, A)` or
-`Rule(n, A, Token.null())`.
+`Rule(n, A, Symbol.null())`.
 
 To give rules primitives, pass `Grammar` a mapping from rules to
 `syntactes.config` classes as the keyword argument `primitives`, as in
-`Grammar(rule_1, rules, tokens, primitives={rule_4: Integer})`. A rule is
+`Grammar(rule_1, rules, symbols, primitives={rule_4: Integer})`. A rule is
 matched by its symbols, not its number. The mapping is copied, and
 `grammar.primitives` is read-only.
 
@@ -267,10 +268,9 @@ Operand positions go in the keyword argument `operands`, a mapping from rules
 to `(left, right)` pairs, as in `operands={rule_2: (1, 3)}`. A binary
 operation without an entry gets its first and last symbols.
 
-Tokens are compared by their symbol and whether they're terminal. A token can
-also carry a `value`, which equality and hashing ignore, so `Token("x", True, 1)`
-and `Token("x", True)` are the same symbol. The [parser](parsing.md) uses that
-value to pass data to your callbacks.
+Symbols are compared by their name and whether they're terminal. A symbol has
+no value: the values come with the `Token`s the [parser](parsing.md) reads,
+each of which holds the terminal symbol it was read as.
 
 ### Errors
 
@@ -279,7 +279,7 @@ value to pass data to your callbacks.
 - the starting rule is not in the rules, or doesn't end with `$`;
 - `$` appears anywhere other than at the end of the starting rule;
 - a rule's left-hand side is a terminal;
-- a rule uses a symbol that is not in the tokens (`ε` is always allowed);
+- a rule uses a symbol that is not in the symbols (`ε` is always allowed);
 - a non-terminal has no rules;
 - two rules have the same number;
 - a primitive is given for a rule that's not in the rules, or isn't one of

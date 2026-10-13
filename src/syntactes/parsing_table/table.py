@@ -1,12 +1,12 @@
 from collections.abc import Iterable
 from typing import Protocol, Self
 
-from syntactes.config import Grammar, Token
+from syntactes.config import Grammar, Symbol
 from syntactes.generator._action import Action
 from syntactes.generator._state import LR0State
 from syntactes.parsing_table import Conflict, Entry
 
-type Row = dict[Token, list[Action]]
+type Row = dict[Symbol, list[Action]]
 
 
 class ParsingTable(Protocol):
@@ -29,7 +29,7 @@ class ParsingTable(Protocol):
 
     def get(self, state: LR0State) -> Row | None: ...
 
-    def get_actions(self, state: LR0State, token: Token) -> list[Action] | None: ...
+    def get_actions(self, state: LR0State, symbol: Symbol) -> list[Action] | None: ...
 
     def pretty_str(self) -> str: ...
 
@@ -74,16 +74,16 @@ class LR0ParsingTable:
 
         return self._initial_state
 
-    def get_actions(self, state: LR0State, token: Token) -> list[Action] | None:
+    def get_actions(self, state: LR0State, symbol: Symbol) -> list[Action] | None:
         """
-        Get the actions from state with given number with `token`.
+        Get the actions from state with given number with `symbol`.
         If there are no actions, returns None.
         """
-        return self.rows.get(state, {}).get(token, None)
+        return self.rows.get(state, {}).get(symbol, None)
 
     def get(self, state: LR0State) -> Row | None:
         """
-        Get the mapping of tokens to actions for the given state number.
+        Get the mapping of symbols to actions for the given state number.
         Returns None if the state is not found.
         """
         return self.rows.get(state, None)
@@ -96,7 +96,7 @@ class LR0ParsingTable:
             self._initial_state = entry.from_state
 
         row = self.rows.setdefault(entry.from_state, {})
-        actions = row.setdefault(entry.token, [])
+        actions = row.setdefault(entry.symbol, [])
         actions.append(entry.action)
 
     def pretty_str(self) -> str:
@@ -111,9 +111,9 @@ class LR0ParsingTable:
         """
         conflicts = []
         for state, row in self.rows.items():
-            for token, actions in row.items():
+            for symbol, actions in row.items():
                 if len(actions) > 1:
-                    conflicts.append(Conflict(state, token, actions))
+                    conflicts.append(Conflict(state, symbol, actions))
 
         return conflicts
 
@@ -125,14 +125,14 @@ class LR0ParsingTable:
 
     def _table_pretty_str(self) -> str:
         # ε is never an input token, so its column would always be empty.
-        tokens = sorted(t for t in self._grammar.tokens if t != Token.null())
+        symbols = sorted(s for s in self._grammar.symbols if s != Symbol.null())
 
-        header = ["", *map(str, tokens)]
+        header = ["", *map(str, symbols)]
         rows = [header]
         for state, row in sorted(self.rows.items(), key=lambda r: r[0].number or 0):
             cells = [str(state.number)]
-            for token in tokens:
-                actions = row.get(token, [])
+            for symbol in symbols:
+                actions = row.get(symbol, [])
                 cells.append(",".join(map(str, actions)) if actions else "--")
 
             rows.append(cells)

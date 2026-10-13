@@ -7,9 +7,13 @@ class TestExports(TestCase):
     def subject(self, module, name):
         return hasattr(importlib.import_module(module), name)
 
-    @args("syntactes.config", "Token")
-    def test_config_exports_token(self):
+    @args("syntactes.config", "Symbol")
+    def test_config_exports_symbol(self):
         self.assertResult(True)
+
+    @args("syntactes.config", "Token")
+    def test_config_does_not_export_token(self):
+        self.assertResult(False)
 
     @args("syntactes.config", "Rule")
     def test_config_exports_rule(self):
@@ -39,6 +43,18 @@ class TestExports(TestCase):
     def test_config_exports_primitives(self):
         self.assertResult(True)
 
+    @args("syntactes", "Symbol")
+    def test_root_exports_symbol(self):
+        self.assertResult(True)
+
+    @args("syntactes", "Token")
+    def test_root_exports_token(self):
+        self.assertResult(True)
+
+    @args("syntactes.parser", "Token")
+    def test_parser_exports_token(self):
+        self.assertResult(True)
+
     @args("syntactes.generator", "LR0Generator")
     def test_generator_exports_lr0_generator(self):
         self.assertResult(True)
@@ -58,6 +74,10 @@ class TestRemovedModules(TestCase):
 
     @args("syntactes.token")
     def test_token(self):
+        self.assertResultRaises(ModuleNotFoundError)
+
+    @args("syntactes.config.token")
+    def test_config_token(self):
         self.assertResultRaises(ModuleNotFoundError)
 
     @args("syntactes.rule")

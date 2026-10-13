@@ -15,7 +15,7 @@ terminals, written either in uppercase (e.g. IDENTIFIER) or quoted (e.g. '(' or
 
 import re
 
-from syntactes import Grammar, Rule, Token
+from syntactes import Grammar, Rule, Symbol
 
 _EMPTY = "%empty"
 
@@ -31,30 +31,30 @@ def grammar_from_bnf(bnf: str, start: str) -> Grammar:
     definitions = _parse(bnf)
     non_terminals = {lhs for lhs, _ in definitions}
 
-    def token(word: str) -> Token:
+    def symbol(word: str) -> Symbol:
         if word in non_terminals:
-            return Token(word, False)
+            return Symbol(word, False)
 
         if len(word) > 2 and word.startswith("'") and word.endswith("'"):
-            return Token(word[1:-1], True)
+            return Symbol(word[1:-1], True)
 
         if not word.isupper():
             raise ValueError(f"Undefined non-terminal '{word}'.")
 
-        return Token(word, True)
+        return Symbol(word, True)
 
-    starting_rule = Rule(0, Token("<start>", False), token(start), Token.eof())
+    starting_rule = Rule(0, Symbol("<start>", False), symbol(start), Symbol.eof())
     rules = [starting_rule]
     for lhs, alternatives in definitions:
         for alternative in alternatives:
-            rhs = [token(word) for word in alternative]
-            rules.append(Rule(len(rules), token(lhs), *rhs))
+            rhs = [symbol(word) for word in alternative]
+            rules.append(Rule(len(rules), symbol(lhs), *rhs))
 
-    tokens = {starting_rule.lhs, Token.eof()}
+    symbols = {starting_rule.lhs, Symbol.eof()}
     for rule in rules:
-        tokens.update(rule.rhs)
+        symbols.update(rule.rhs)
 
-    return Grammar(starting_rule, rules, tokens)
+    return Grammar(starting_rule, rules, symbols)
 
 
 def find_rule(grammar: Grammar, lhs: str, *rhs: str) -> Rule:
@@ -63,20 +63,20 @@ def find_rule(grammar: Grammar, lhs: str, *rhs: str) -> Rule:
     side, written as in the BNF. Raises `LookupError` if there is none.
     """
     for rule in grammar.rules:
-        if rule.lhs.symbol != lhs:
+        if rule.lhs.name != lhs:
             continue
 
-        if [_word(token) for token in rule.rhs] == list(rhs):
+        if [_word(symbol) for symbol in rule.rhs] == list(rhs):
             return rule
 
     raise LookupError(f"No rule {lhs} : {' '.join(rhs) or _EMPTY}")
 
 
-def _word(token: Token) -> str:
-    if token.is_terminal and not token.symbol.isupper():
-        return f"'{token.symbol}'"
+def _word(symbol: Symbol) -> str:
+    if symbol.is_terminal and not symbol.name.isupper():
+        return f"'{symbol.name}'"
 
-    return token.symbol
+    return symbol.name
 
 
 def _parse(bnf: str) -> list[tuple[str, list[list[str]]]]:
