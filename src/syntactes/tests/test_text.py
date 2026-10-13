@@ -243,11 +243,25 @@ class TestFromTextErrors(TestCase):
 
     @args("my expr -> NUMBER\n")
     def test_lhs_with_space(self):
-        self.assert_problems([(1, "invalid left-hand side 'my expr'")])
+        self.assert_problems(
+            [
+                (
+                    1,
+                    "invalid left-hand side 'my expr', name can contain alphanumerics and underscores only",
+                )
+            ]
+        )
 
     @args("9expr -> NUMBER\n")
     def test_invalid_lhs_name(self):
-        self.assert_problems([(1, "invalid left-hand side '9expr'")])
+        self.assert_problems(
+            [
+                (
+                    1,
+                    "invalid left-hand side '9expr', name can contain alphanumerics and underscores only",
+                )
+            ]
+        )
 
     @args("expr -> NUMBER '+' NUMBER\n")
     def test_invalid_symbol(self):
@@ -291,11 +305,25 @@ class TestFromTextErrors(TestCase):
 
     @args("int % 9expr -> NUMBER\n")
     def test_primitive_with_invalid_lhs(self):
-        self.assert_problems([(1, "invalid left-hand side '9expr'")])
+        self.assert_problems(
+            [
+                (
+                    1,
+                    "invalid left-hand side '9expr', name can contain alphanumerics and underscores only",
+                )
+            ]
+        )
 
     @args("int % float % expr -> NUMBER\n")
     def test_two_primitives(self):
-        self.assert_problems([(1, "invalid left-hand side 'float % expr'")])
+        self.assert_problems(
+            [
+                (
+                    1,
+                    "invalid left-hand side 'float % expr', name can contain alphanumerics and underscores only",
+                )
+            ]
+        )
 
     @args("int % expr -> NUMBER\nfloat % expr -> NUMBER\n")
     def test_duplicate_rule_with_other_primitive(self):
@@ -372,7 +400,10 @@ class TestFromTextErrors(TestCase):
         self.assert_problems(
             [
                 (1, "expected 'lhs -> symbols'"),
-                (3, "invalid left-hand side '9'"),
+                (
+                    3,
+                    "invalid left-hand side '9', name can contain alphanumerics and underscores only",
+                ),
                 (4, "'$' is reserved for the end of the input"),
             ]
         )

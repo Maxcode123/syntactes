@@ -144,7 +144,7 @@ def _line_error(
         return "rule has no left-hand side"
 
     if not _NAME.fullmatch(lhs):
-        return f"invalid left-hand side {lhs!r}"
+        return f"invalid left-hand side {lhs!r}, name can contain alphanumerics and underscores only"
 
     if primitive and not lhs:
         return f"expected 'primitive {_PERCENT} lhs {_ARROW} symbols'"
