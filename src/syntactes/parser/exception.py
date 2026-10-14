@@ -40,3 +40,11 @@ class PrimitiveError(ParserError):
         self.rule = rule
         self.primitive = primitive
         super().__init__(f"Primitive {primitive.string()} of rule '{rule}' failed.")
+
+
+class LocationObjectError(ParserError):
+    """
+    `Location.from_object` received an object it can't build a location from:
+    it lacks `offset`, `line` or `column`, or one of them isn't an integer. In
+    the latter case the original exception is available as `__cause__`.
+    """

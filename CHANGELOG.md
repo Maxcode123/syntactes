@@ -16,9 +16,10 @@
 - `Token` is split in two. A grammar is now made of `Symbol`s:
   `Symbol(name, is_terminal)`, with `Symbol.eof()` and `Symbol.null()`, and a
   `name` where `Token` had `symbol`. A parser reads `Token`s:
-  `Token(symbol, value=None)`, a terminal `Symbol` and the value it was read
-  with. So `Token("x", True, 1)` becomes `Token(Symbol("x", True), 1)`, and a
-  stream ends with `Token(Symbol.eof())`. Callbacks still receive one `Token`
+  `Token(symbol, location, value=None)`, a terminal `Symbol`, the `Location`
+  it starts at, and the value it was read with. So `Token("x", True, 1)`
+  becomes `Token(Symbol("x", True), Location(0, 1, 1), 1)`, and a stream ends
+  with `Token(Symbol.eof(), location)`. Callbacks still receive one `Token`
   per right-hand side symbol. Tokens are equal when their symbols and values
   are. `Symbol` is exported from `syntactes` and `syntactes.config`, and `Token`
   from `syntactes` and `syntactes.parser`.
@@ -28,6 +29,19 @@
   `symbol`, `ParsingTable.get_actions(state, symbol)` takes a symbol, and
   `UnexpectedTokenError.expected_tokens` is `expected_symbols`.
   `Conflict.pretty_str()` says "input symbol" instead of "input token".
+
+### Added
+
+- `Location(offset, line, column)`, where a token starts in the source text,
+  with a 0-based offset and a 1-based line and column. Every `Token` has one,
+  and the token the parser pushes for a rule's left-hand side gets the
+  location of the rule's first token, or for an empty rule, of the token that
+  follows it.
+
+- `Location.from_object` builds a `Location` from a mapping with `offset`,
+  `line` and `column` keys, or from any object with those attributes, such as
+  a lectes token's location. It raises `LocationObjectError` if one is missing
+  or isn't an integer. Both are exported from `syntactes.parser`.
 
 ## 0.8.0 - 2026-10-10
 

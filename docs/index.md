@@ -35,8 +35,10 @@ Greek _συντάκτης_ (/sin'daktis/), meaning editor or composer.
 Here's a calculator in a few lines:
 
 ```python
+import re
+
 from syntactes import Grammar, Symbol, Token
-from syntactes.parser import LR1Parser
+from syntactes.parser import Location, LR1Parser
 
 grammar = Grammar.from_text("""
 expr -> expr PLUS term
@@ -78,14 +80,15 @@ PLUS, TIMES, NUMBER = (Symbol(name, True) for name in ("PLUS", "TIMES", "NUMBER"
 
 
 def lex(text):
-    for word in text.split():
+    for match in re.finditer(r"\S+", text):
+        word, location = match[0], Location(match.start(), 1, match.start() + 1)
         if word == "+":
-            yield Token(PLUS)
+            yield Token(PLUS, location)
         elif word == "*":
-            yield Token(TIMES)
+            yield Token(TIMES, location)
         else:
-            yield Token(NUMBER, int(word))
-    yield Token(Symbol.eof())
+            yield Token(NUMBER, location, int(word))
+    yield Token(Symbol.eof(), Location(len(text), 1, len(text) + 1))
 
 
 print(parser.parse(lex("2 * 3 + 4")))  # 10
@@ -93,4 +96,5 @@ print(parser.parse(lex("2 * 3 + 4")))  # 10
 
 Need a scanner to produce the tokens? The sibling project
 [lectes](https://maximosnikiforakis.gr/lectes/) scans text with named regexes,
-and its tokens map onto syntactes `Token`s.
+and its tokens map onto syntactes `Token`s, with
+`Location.from_object` taking their locations as they are.

@@ -38,20 +38,22 @@ grammar raises `ValueError`.
 
 - The callback is called with one token per right-hand side symbol, in order,
   and its return value becomes the rule's value.
-- Each token has a `symbol` and a `value`. A terminal's token is the one
-  from the stream, with the value it was read with, such as `Token(x, 42)`.
-  A non-terminal's token holds the value computed for its rule.
+- Each token has a `symbol`, a [`location`](#locations) and a `value`. A
+  terminal's token is the one from the stream, with the value it was read
+  with, such as `Token(x, Location(0, 1, 1), 42)`. A non-terminal's token holds
+  the value computed for its rule.
 - An empty rule's callback is called with no arguments.
 - A callback wins over the rule's primitive.
 - Exceptions raised in callbacks propagate out of `parse()` unchanged.
 
 `parse()` takes any iterable of `Token`s, a generator included. A token is a
-terminal `Symbol` of the grammar and a `value`, which defaults to `None`.
-`parse()` expects a `$` token, `Token(Symbol.eof())`, as the last one.
+terminal `Symbol` of the grammar, the [`Location`](#locations) it starts at,
+and a `value`, which defaults to `None`. `parse()` expects a `$` token,
+`Token(Symbol.eof(), location)`, as the last one.
 
 ```python
 from syntactes import Grammar, Rule, Symbol, Token
-from syntactes.parser import ParserError, SLRParser
+from syntactes.parser import Location, SLRParser, UnexpectedTokenError
 
 EOF = Symbol.eof()
 S = Symbol("S", is_terminal=False)
@@ -89,7 +91,8 @@ def result(e):
 def add(t, plus, e):
     # One token per right-hand side symbol, in order. A non-terminal's value is
     # whatever the callback of the rule that produced it returned.
-    print(f"reducing by {rule_2}: {t.value} {plus} {e.value}")
+    # A non-terminal's token starts where its first token does.
+    print(f"column {t.location.column}: reducing by {rule_2}: {t.value} + {e.value}")
     return t.value + e.value
 
 
@@ -104,32 +107,37 @@ def number(x_token):
     return x_token.value
 
 
-def num(value):
-    return Token(x, value)
+def lex(text):
+    # One token per character but spaces, located at its offset on line 1.
+    for offset, char in enumerate(text):
+        location = Location(offset, 1, offset + 1)
+        if char == "+":
+            yield Token(PLUS, location)
+        elif char != " ":
+            yield Token(x, location, int(char))
+    yield Token(EOF, Location(len(text), 1, len(text) + 1))
 
 
-plus, eof = Token(PLUS), Token(EOF)
+print("Parsing: 1 + 2 + 3\n")
+print("result:", parser.parse(lex("1 + 2 + 3")))
 
-print("Parsing stream: 1 + 2 + 3 $\n")
-print("result:", parser.parse([num(1), plus, num(2), plus, num(3), eof]))
-
-print("\nParsing stream: 1 + $\n")
+print("\nParsing: 1 +\n")
 try:
-    parser.parse([num(1), plus, eof])
-except ParserError as e:
-    print("ParserError:", e)
+    parser.parse(lex("1 +"))
+except UnexpectedTokenError as e:
+    print(f"column {e.received_token.location.column}: {e}")
 ```
 
 ```
-Parsing stream: 1 + 2 + 3 $
+Parsing: 1 + 2 + 3
 
-reducing by E -> T + E: 2 + 3
-reducing by E -> T + E: 1 + 5
+column 5: reducing by E -> T + E: 2 + 3
+column 1: reducing by E -> T + E: 1 + 5
 result: 6
 
-Parsing stream: 1 + $
+Parsing: 1 +
 
-ParserError: Received token: $; expected one of: ['x']
+column 4: Received token: $; expected one of: ['x']
 ```
 
 ## Primitives
@@ -146,8 +154,10 @@ If a primitive raises, `parse()` raises a `PrimitiveError` naming the rule, with
 the original exception as its `__cause__`.
 
 ```python
+import re
+
 from syntactes import Grammar, Symbol, Token
-from syntactes.parser import LR1Parser, PrimitiveError
+from syntactes.parser import Location, LR1Parser, PrimitiveError
 
 grammar = Grammar.from_text("""
 add(1,3) % expr -> expr PLUS term
@@ -173,9 +183,10 @@ KINDS = {"+": "PLUS", "-": "MINUS", "*": "TIMES", "(": "LPAREN", ")": "RPAREN"}
 
 
 def lex(text):
-    for word in text.split():
-        yield Token(Symbol(KINDS.get(word, "NUMBER"), True), word)
-    yield Token(Symbol.eof())
+    for match in re.finditer(r"\S+", text):
+        location = Location(match.start(), 1, match.start() + 1)
+        yield Token(Symbol(KINDS.get(match[0], "NUMBER"), True), location, match[0])
+    yield Token(Symbol.eof(), Location(len(text), 1, len(text) + 1))
 
 
 print(parser.parse(lex("2 * ( 7 - 2 - 1 ) + 3")))
@@ -193,6 +204,38 @@ Primitive int of rule 'factor -> NUMBER' failed. (ValueError("invalid literal fo
 
 `factor -> LPAREN expr RPAREN` has three symbols and no primitive, so it needs
 a callback to keep the value of `expr`.
+
+## Locations
+
+Every token has a `location`, a `Location(offset, line, column)` saying where it
+starts in the source text. The offset is 0-based, and the line and column are
+1-based. Your lexer gives each terminal's token its location, and the parser
+gives each non-terminal's token the location of its first right-hand side
+token, so a callback can tell where its rule's text starts. An empty rule has no
+tokens, so its token gets the location of the token that follows it.
+
+If your lexer has a location type of its own, `Location.from_object` builds a
+`Location` from any object with `offset`, `line` and `column` attributes, like
+the locations of [lectes](https://maximosnikiforakis.gr/lectes/) tokens, or from
+a mapping with those keys. It raises `LocationObjectError`, a `ParserError`, if
+one is missing or isn't an integer, with the conversion's exception as its
+`__cause__`:
+
+```python
+from syntactes.parser import Location, LocationObjectError
+
+print(Location.from_object({"offset": 4, "line": 2, "column": 3}))
+
+try:
+    Location.from_object({"offset": 4, "line": "two", "column": 3})
+except LocationObjectError as e:
+    print(f"{e} ({e.__cause__!r})")
+```
+
+```
+Location(offset=4, line=2, column=3)
+cannot create Location object from {'offset': 4, 'line': 'two', 'column': 3}, 'line' cannot be converted to an integer (ValueError("invalid literal for int() with base 10: 'two'"))
+```
 
 ## Errors
 
@@ -218,7 +261,7 @@ right-associative:
 
 ```python
 from syntactes import Grammar, Symbol, Token
-from syntactes.parser import SLRParser
+from syntactes.parser import Location, SLRParser
 
 grammar = Grammar.from_text("""
 expr -> expr PLUS expr
@@ -244,9 +287,20 @@ def on_x(x):
     return x.value
 
 
-PLUS, X = Token(Symbol("PLUS", True)), Symbol("X", True)
-stream = [Token(X, "a"), PLUS, Token(X, "b"), PLUS, Token(X, "c")]
-print(parser.parse([*stream, Token(Symbol.eof())]))  # (a + (b + c))
+PLUS, X = Symbol("PLUS", True), Symbol("X", True)
+
+
+def lex(text):
+    for offset, char in enumerate(text):
+        location = Location(offset, 1, offset + 1)
+        if char == "+":
+            yield Token(PLUS, location)
+        elif char != " ":
+            yield Token(X, location, char)
+    yield Token(Symbol.eof(), Location(len(text), 1, len(text) + 1))
+
+
+print(parser.parse(lex("a + b + c")))  # (a + (b + c))
 ```
 
 To get left-associativity, write the grammar that way instead:

@@ -1,8 +1,9 @@
 # isort: skip_file
 # Import order matters: `parser` imports the token and the exceptions from
 # `syntactes.parser`.
-from .token import Token as Token
+from .token import Location as Location, Token as Token
 from .exception import (
+    LocationObjectError as LocationObjectError,
     NotAcceptedError as NotAcceptedError,
     ParserError as ParserError,
     PrimitiveError as PrimitiveError,

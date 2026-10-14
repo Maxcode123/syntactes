@@ -14,7 +14,7 @@ import re
 from collections.abc import Callable, Collection, Iterator
 
 from syntactes import LR1Generator, Rule, Symbol, Token
-from syntactes.parser import LR1Parser
+from syntactes.parser import Location, LR1Parser
 from syntactes.parsing_table import ParsingTable
 from syntactes.tests._bnf import grammar_from_bnf
 
@@ -390,10 +390,19 @@ _TOKEN_RE = re.compile(
 )
 
 
+def _location(source: str, offset: int) -> Location:
+    """
+    Returns the location of the character at `offset` in the source.
+    """
+    line_start = source.rfind("\n", 0, offset) + 1
+    line = source.count("\n", 0, offset) + 1
+    return Location(offset, line, offset - line_start + 1)
+
+
 def tokenize(source: str, typedef_names: Collection[str] = ()) -> Iterator[Token]:
     """
-    Yields the tokens of the C source, each with its lexeme as its value, and
-    then the EOF token. Preprocessor lines and comments are skipped, and names in
+    Yields the tokens of the C source, each with its location and its lexeme as
+    its value, and then the EOF token. Preprocessor lines and comments are skipped, and names in
     `typedef_names` are type names after their declaration.
 
     Raises `ValueError` on a character that starts no token.
@@ -430,9 +439,10 @@ def tokenize(source: str, typedef_names: Collection[str] = ()) -> Iterator[Token
             symbol = _PUNCTUATORS[lexeme]
 
         previous = symbol
-        yield Token(Symbol(symbol, True), lexeme)
+        location = _location(source, match.start())
+        yield Token(Symbol(symbol, True), location, lexeme)
 
-    yield Token(Symbol.eof())
+    yield Token(Symbol.eof(), _location(source, len(source)))
 
 
 def source_parser() -> LR1Parser:

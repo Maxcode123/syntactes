@@ -55,6 +55,14 @@ class TestExports(TestCase):
     def test_parser_exports_token(self):
         self.assertResult(True)
 
+    @args("syntactes.parser", "Location")
+    def test_parser_exports_location(self):
+        self.assertResult(True)
+
+    @args("syntactes.parser", "LocationObjectError")
+    def test_parser_exports_location_object_error(self):
+        self.assertResult(True)
+
     @args("syntactes.generator", "LR0Generator")
     def test_generator_exports_lr0_generator(self):
         self.assertResult(True)

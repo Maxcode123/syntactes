@@ -83,16 +83,21 @@ All code lives in `src/syntactes/`:
   classes. These have `from_entries(entries, grammar)`, `pretty_str()` and
   `conflicts()`. The subclasses only change the header.
 - `parser/`:
-  - `token.py`: `Token(symbol, value=None)`, a token of the parser's input: a
-    terminal `Symbol` and the value it was read with. Equality uses the symbol
-    and the value, and hashing only the symbol.
+  - `token.py`: `Token(symbol, location, value=None)`, a token of the parser's
+    input: a terminal `Symbol`, the `Location` it starts at, and the value it
+    was read with. Equality uses the symbol and the value, and hashing only the
+    symbol. `Location(offset, line, column)` is a frozen dataclass (0-based
+    offset, 1-based line and column, as in lectes), and
+    `Location.from_object` builds one from a mapping or an object with those
+    attributes, raising `LocationObjectError`.
   - `parser.py`: `LR0Parser`, `SLRParser` and `LR1Parser`, built from a table or
     with `from_grammar()`. `@parser.execute_on(rule)` registers a callback on
     that parser. On each reduction, the rule's value becomes the `value` of the
-    pushed LHS token. It comes from the callback (called with one token per RHS
-    symbol), else the rule's primitive, else the value of its only token, else
-    `None`. `parse(stream)` consumes tokens and returns the starting rule's
-    value, computed the same way without the trailing `$`.
+    pushed LHS token, and its location is the first RHS token's (the
+    lookahead's for an empty rule). The value comes from the callback (called
+    with one token per RHS symbol), else the rule's primitive, else the value
+    of its only token, else `None`. `parse(stream)` consumes tokens and returns
+    the starting rule's value, computed the same way without the trailing `$`.
   - `exception.py`: `ParserError` and its subclasses, including
     `PrimitiveError`, which wraps a failing primitive.
 - `tests/`: `data.py` holds the shared test grammars, rules, states and parsing

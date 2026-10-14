@@ -63,10 +63,12 @@ class Parser(ABC):
     def parse(self, stream: Iterable[Token]) -> object:
         """
         Parses the given stream of tokens. Expects a token with the EOF symbol,
-        `Token(Symbol.eof())`, as the last one.
+        `Token(Symbol.eof(), location)`, as the last one.
 
-        On each reduction the rule's value becomes the `value` of the token
-        pushed for the left-hand side. The value is, in order of precedence:
+        On each reduction the parser pushes a token for the left-hand side. Its
+        `location` is that of the rule's first token, or for an empty rule, of
+        the token that follows it. Its `value` is the rule's value, which is, in
+        order of precedence:
 
         - what the callback registered for the rule returns, called with one
           token per right-hand side symbol, in order;
@@ -113,7 +115,12 @@ class Parser(ABC):
 
                 value = self._value(rule, args)
 
-                lhs = Token(rule.lhs, value)
+                if len(args) > 0:
+                    loc = args[0].location
+                else:
+                    loc = token.location
+
+                lhs = Token(rule.lhs, loc, value)
                 tokens.append(lhs)
                 shift = self._get_action(states[-1], lhs)
                 states.append(cast(LR0State, shift.actionable))

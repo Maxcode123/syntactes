@@ -12,7 +12,7 @@ import tokenize as _tokenize
 from collections.abc import Callable, Iterator
 
 from syntactes import LR1Generator, Rule, Symbol, Token
-from syntactes.parser import LR1Parser
+from syntactes.parser import Location, LR1Parser
 from syntactes.parsing_table import ParsingTable
 from syntactes.tests._bnf import grammar_from_bnf
 
@@ -328,12 +328,13 @@ _NAMED = {
 
 def tokenize(source: str) -> Iterator[Token]:
     """
-    Yields the tokens of the Python source, with the tokenize module's string of
-    each as its value, and then the EOF token. Comments and blank lines are
+    Yields the tokens of the Python source, each with its location and the
+    tokenize module's string of it as its value, and then the EOF token. Comments and blank lines are
     skipped.
 
     Raises `ValueError` on an f-string.
     """
+    line_starts = [0, *(i + 1 for i, c in enumerate(source) if c == "\n")]
     for info in _tokenize.generate_tokens(io.StringIO(source).readline):
         if info.type in _SKIPPED:
             continue
@@ -350,9 +351,12 @@ def tokenize(source: str) -> Iterator[Token]:
         else:
             raise ValueError(f"Unsupported token {info}.")
 
-        yield Token(Symbol(symbol, True), info.string)
+        line, column = info.start
+        location = Location(line_starts[line - 1] + column, line, column + 1)
+        yield Token(Symbol(symbol, True), location, info.string)
 
-    yield Token(Symbol.eof())
+    end = Location(len(source), len(line_starts), len(source) - line_starts[-1] + 1)
+    yield Token(Symbol.eof(), end)
 
 
 # Rules whose alternatives of more than one symbol are expressions that can be

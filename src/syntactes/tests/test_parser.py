@@ -4,6 +4,7 @@ from syntactes import Grammar, Rule, Symbol, Token
 from syntactes.config import Integer
 from syntactes.generator._action import Action
 from syntactes.parser import (
+    Location,
     LR0Parser,
     LR1Parser,
     NotAcceptedError,
@@ -25,12 +26,14 @@ from syntactes.tests.data import (
     grammar_3,
     grammar_4,
     grammar_6,
+    grammar_7,
     grammar_8,
     lr0_parsing_table,
     lr0_state_1,
     lr1_parsing_table,
     rule_1_1,
     rule_1_3,
+    rule_1_7,
     rule_2_1,
     rule_2_6,
     rule_3_1,
@@ -40,17 +43,23 @@ from syntactes.tests.data import (
     rule_4_1,
     slr_parsing_table,
     x,
+    y,
 )
 
-x1 = Token(x, 1)
-x2 = Token(x, 2)
+loc = Location(0, 1, 1)
+x1 = Token(x, loc, 1)
+x2 = Token(x, loc, 2)
 
 
 def tokens(stream):
     """
-    Wraps the bare symbols of a test stream in tokens without a value.
+    Wraps the bare symbols of a test stream in tokens without a value, located
+    one column apart on the first line.
     """
-    return [s if isinstance(s, Token) else Token(s) for s in stream]
+    return [
+        s if isinstance(s, Token) else Token(s, Location(i, 1, i + 1))
+        for i, s in enumerate(stream)
+    ]
 
 
 class TestLR0Parser(TestCase):
@@ -393,7 +402,7 @@ class TestSLRParserValues(TestSLRParser):
     def test_callback_receives_tokens(self):
         self.parser().execute_on(rule_2_1)(lambda *args: args)
         self.parser().execute_on(rule_1_1)(lambda e: e.value)
-        self.assertResult((Token(T, 1), Token(PLUS), Token(E, 2)))
+        self.assertResult((Token(T, loc, 1), Token(PLUS, loc), Token(E, loc, 2)))
 
 
 class TestParsingTableGrammar(TestCase):
@@ -500,6 +509,25 @@ class TestParserEmptyRuleCallback(TestCase):
         self.assertResult([()])
 
 
+class TestParserReducedTokenLocation(TestCase):
+    def subject(self, grammar, rule, *stream):
+        parser = SLRParser.from_grammar(grammar)
+        parser.execute_on(rule)(lambda *args: [arg.location for arg in args])
+        return parser.parse(tokens(stream))
+
+    @args(grammar_1, rule_1_1, x, PLUS, x, EOF)
+    def test_starts_at_first_token(self):
+        self.assertResult([Location(0, 1, 1)])
+
+    @args(grammar_1, rule_2_1, x, PLUS, x, EOF)
+    def test_does_not_use_lookahead(self):
+        self.assertResult([Location(0, 1, 1), Location(1, 1, 2), Location(2, 1, 3)])
+
+    @args(grammar_7, rule_1_7, y, x, EOF)
+    def test_empty_rule_starts_at_lookahead(self):
+        self.assertResult([Location(0, 1, 1), Location(1, 1, 2), Location(1, 1, 2)])
+
+
 NUMBER = Symbol("NUMBER", True)
 PLUS_ = Symbol("PLUS", True)
 MINUS = Symbol("MINUS", True)
@@ -508,7 +536,7 @@ EQ = Symbol("EQ", True)
 
 
 def number(value):
-    return Token(NUMBER, value)
+    return Token(NUMBER, loc, value)
 
 
 CALCULATOR = """
