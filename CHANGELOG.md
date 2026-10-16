@@ -43,6 +43,13 @@
   a lectes token's location. It raises `LocationObjectError` if one is missing
   or isn't an integer. Both are exported from `syntactes.parser`.
 
+- `execute_on` takes a rule's text as well as a `Rule`, as in
+  `@parser.execute_on("E -> T + E")`, and looks it up by symbol name in the
+  parser's grammar. The text can start with the rule's primitive, as in
+  `Grammar.from_text` (`"int % T -> x"`), which must match the grammar's. Text
+  that's malformed, names no rule or more than one, or gives the wrong
+  primitive raises `ValueError`.
+
 ## 0.8.0 - 2026-10-10
 
 ### Breaking changes

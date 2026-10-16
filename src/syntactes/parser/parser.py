@@ -3,6 +3,7 @@ from collections.abc import Callable, Iterable
 from typing import cast
 
 from syntactes.config import Grammar, Rule, Symbol
+from syntactes.config._text import _split_primitive
 from syntactes.config.primitive import NoneType, Primitive, _is_binary
 from syntactes.generator import LR0Generator, LR1Generator, SLRGenerator
 from syntactes.generator._action import Action, ActionType
@@ -41,16 +42,29 @@ class Parser(ABC):
         parser = cls(parsing_table)
         return parser
 
-    def execute_on[F: Executable](self, rule: Rule) -> Callable[[F], F]:
+    def execute_on[F: Executable](self, rule: Rule | str) -> Callable[[F], F]:
         """
         Decorate a function to be executed when this parser reduces by `rule`.
+
+        `rule` is a `Rule` or its text, as `str(rule)` prints it: the left-hand
+        side, `->`, then the right-hand side symbols separated by whitespace,
+        e.g. `"E -> T + E"`. An empty rule is `"A -> ε"` or `"A ->"`, and the
+        starting rule ends with `$`. Symbols are matched by name. The text can
+        start with the rule's primitive, as in `Grammar.from_text`
+        (`"int % T -> x"`, `"add(1,3) % E -> E + T"`), which must then match
+        the grammar's; without operands, `"add % E -> E + T"` matches any.
 
         The function is called with one token per right-hand side symbol of the
         rule, and returns the value of the left-hand side token. The decorated
         function is returned unchanged.
 
-        Raises `ValueError` if `rule` is not a rule of the parser's grammar.
+        Raises `ValueError` if `rule` is not a rule of the parser's grammar, if
+        its text is malformed, matches more than one rule, or gives a primitive
+        the rule doesn't have.
         """
+        if isinstance(rule, str):
+            rule = self._rule_from_text(rule)
+
         if rule not in self._table.grammar.rules:
             raise ValueError(f"Rule '{rule}' is not in the parser's grammar.")
 
@@ -59,6 +73,83 @@ class Parser(ABC):
             return executable_fn
 
         return executable_decorator
+
+    def _rule_from_text(self, text: str) -> Rule:
+        """
+        Returns the rule of the parser's grammar that `text` names, as described
+        in `execute_on`.
+        """
+        left, arrow, rest = text.partition("->")
+        prefix, percent, lhs = left.partition("%")
+        if not percent:
+            prefix, lhs = "", prefix
+
+        lhs_names = lhs.split()
+        if not arrow or len(lhs_names) != 1 or (percent and not prefix.strip()):
+            raise ValueError(
+                f"Invalid rule '{text}', expected '[primitive %] lhs -> symbols'."
+            )
+
+        rhs_names = tuple(rest.split())
+        empty = rhs_names in ((), (Symbol.null().name,))
+        matches = [
+            rule
+            for rule in self._table.grammar.rules
+            if rule.lhs.name == lhs_names[0]
+            and (
+                rule.is_empty()
+                if empty
+                else tuple(s.name for s in rule.rhs) == rhs_names
+            )
+        ]
+
+        if not matches:
+            raise ValueError(f"Rule '{text}' is not in the parser's grammar.")
+
+        if len(matches) > 1:
+            raise ValueError(
+                f"Rule '{text}' matches more than one rule of the parser's grammar,"
+                " pass the Rule instead."
+            )
+
+        rule = matches[0]
+        if percent:
+            self._check_primitive(rule, prefix.strip(), text)
+
+        return rule
+
+    def _check_primitive(self, rule: Rule, prefix: str, text: str) -> None:
+        """
+        Raises `ValueError` unless `prefix`, the primitive of a rule's text, is
+        the rule's primitive in the grammar, with its operands if it gives any.
+        """
+        try:
+            name, operands = _split_primitive(prefix)
+        except ValueError:
+            raise ValueError(
+                f"Invalid primitive '{prefix}' in rule '{text}', expected 'name' or"
+                " 'name(i,j)'."
+            ) from None
+
+        grammar = self._table.grammar
+        primitive = grammar.primitives.get(rule)
+        if primitive is None:
+            raise ValueError(f"Rule '{rule}' has no primitive, but '{text}' has.")
+
+        if primitive.string() != name:
+            raise ValueError(
+                f"Rule '{rule}' has primitive '{primitive.string()}', not '{name}'."
+            )
+
+        if operands is None:
+            return
+
+        expected = grammar.operands.get(rule)
+        if expected is None:
+            raise ValueError(f"Rule '{rule}' has no operands, but '{text}' has.")
+
+        if operands != expected:
+            raise ValueError(f"Rule '{rule}' has operands {expected}, not {operands}.")
 
     def parse(self, stream: Iterable[Token]) -> object:
         """

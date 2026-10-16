@@ -141,6 +141,24 @@ rules_8 = (rule_1_4, rule_2_4, rule_3_8, rule_4_4)
 
 grammar_8 = Grammar(rule_1_4, rules_8, symbols_4)
 
+# A terminal and a non-terminal with the same name, so "A -> a" names two rules.
+# 0. S -> A $
+# 1. A -> a      (a terminal)
+# 2. A -> a      (a non-terminal)
+# 3. a -> x
+a_non_terminal = Symbol("a", False)
+
+symbols_9 = {EOF, S, A, a, a_non_terminal, x}
+
+rule_1_9 = Rule(0, S, A, EOF)
+rule_2_9 = Rule(1, A, a)
+rule_3_9 = Rule(2, A, a_non_terminal)
+rule_4_9 = Rule(3, a_non_terminal, x)
+
+rules_9 = (rule_1_9, rule_2_9, rule_3_9, rule_4_9)
+
+grammar_9 = Grammar(rule_1_9, rules_9, symbols_9)
+
 
 def lr0_state_1():
     item_1 = LR0Item(grammar_1.starting_rule, 0)  # S -> . E $

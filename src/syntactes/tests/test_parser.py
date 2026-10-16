@@ -28,6 +28,7 @@ from syntactes.tests.data import (
     grammar_6,
     grammar_7,
     grammar_8,
+    grammar_9,
     lr0_parsing_table,
     lr0_state_1,
     lr1_parsing_table,
@@ -430,6 +431,110 @@ class TestParserExecuteOn(TestCase):
     def test_unknown_rule_raises(self):
         self.assertResultRaises(ValueError)
 
+    @args("E -> T + E")
+    def test_rule_text_returns_function_unchanged(self):
+        self.assertResultIs(_callback)
+
+
+class TestParserExecuteOnRuleText(TestCase):
+    """
+    Registers a callback by a rule's text, parses the stream, and returns the
+    symbol names of the tokens of each call.
+    """
+
+    def subject(self, grammar, text, *stream):
+        calls = []
+        parser = SLRParser.from_grammar(grammar)
+        parser.execute_on(text)(lambda *t: calls.append([s.symbol.name for s in t]))
+        parser.parse(tokens(stream))
+        return calls
+
+    @args(grammar_1, "E -> T + E", x, PLUS, x, EOF)
+    def test_rule(self):
+        self.assertResult([["T", "+", "E"]])
+
+    @args(grammar_1, "  E->T   +  E ", x, PLUS, x, EOF)
+    def test_whitespace_is_ignored(self):
+        self.assertResult([["T", "+", "E"]])
+
+    @args(grammar_1, "T -> x", x, PLUS, x, EOF)
+    def test_rule_reduced_twice(self):
+        self.assertResult([["x"], ["x"]])
+
+    @args(grammar_1, "S -> E $", x, EOF)
+    def test_starting_rule(self):
+        self.assertResult([["E"]])
+
+    @args(grammar_4, "A -> ε", x, EOF)
+    def test_empty_rule_with_null(self):
+        self.assertResult([[]])
+
+    @args(grammar_4, "A ->", x, EOF)
+    def test_empty_rule_without_null(self):
+        self.assertResult([[]])
+
+    # grammar_8 writes its empty rule without ε.
+    @args(grammar_8, "A -> ε", x, EOF)
+    def test_empty_rule_written_without_null(self):
+        self.assertResult([[]])
+
+    @args(grammar_9, "a -> x", x, EOF)
+    def test_unambiguous_rule_of_grammar_with_shared_name(self):
+        self.assertResult([["x"]])
+
+
+class TestParserExecuteOnRuleTextErrors(TestCase):
+    def subject(self, grammar, text):
+        return SLRParser.from_grammar(grammar).execute_on(text)
+
+    @args(grammar_1, "S -> E")
+    def test_starting_rule_without_eof(self):
+        self.assertResultRaisesRegex(ValueError, "is not in the parser's grammar")
+
+    @args(grammar_1, "E -> E + E")
+    def test_unknown_rule(self):
+        self.assertResultRaisesRegex(ValueError, "is not in the parser's grammar")
+
+    @args(grammar_1, "E -> T * E")
+    def test_unknown_symbol(self):
+        self.assertResultRaisesRegex(ValueError, "is not in the parser's grammar")
+
+    @args(grammar_1, "T -> x x")
+    def test_extra_symbol(self):
+        self.assertResultRaisesRegex(ValueError, "is not in the parser's grammar")
+
+    @args(grammar_1, "T ->")
+    def test_empty_text_of_non_empty_rule(self):
+        self.assertResultRaisesRegex(ValueError, "is not in the parser's grammar")
+
+    @args(grammar_1, "E T + E")
+    def test_no_arrow(self):
+        self.assertResultRaisesRegex(ValueError, "^Invalid rule")
+
+    @args(grammar_1, "-> T")
+    def test_no_left_hand_side(self):
+        self.assertResultRaisesRegex(ValueError, "^Invalid rule")
+
+    @args(grammar_1, "E T -> x")
+    def test_two_left_hand_sides(self):
+        self.assertResultRaisesRegex(ValueError, "^Invalid rule")
+
+    @args(grammar_1, "")
+    def test_empty_text(self):
+        self.assertResultRaisesRegex(ValueError, "^Invalid rule")
+
+    @args(grammar_1, "% T -> x")
+    def test_empty_primitive(self):
+        self.assertResultRaisesRegex(ValueError, "^Invalid rule")
+
+    @args(grammar_1, "int % T -> x")
+    def test_primitive_of_rule_without_one(self):
+        self.assertResultRaisesRegex(ValueError, "has no primitive")
+
+    @args(grammar_9, "A -> a")
+    def test_ambiguous_rule(self):
+        self.assertResultRaisesRegex(ValueError, "more than one rule")
+
 
 class TestParserExecutablesArePerParser(TestCase):
     def subject(self):
@@ -598,6 +703,75 @@ class TestParserPrimitives(TestCase):
     @args(number("x"), EOF)
     def test_primitive_error_is_parser_error(self):
         self.assertResultRaises(ParserError)
+
+
+class TestParserExecuteOnRuleTextPrimitives(TestCase):
+    """
+    Registers a callback by a rule's text on the calculator, whose return value,
+    the symbol names of its tokens, passes through to the parse result.
+    """
+
+    def subject(self, text, *stream):
+        parser = LR1Parser.from_grammar(Grammar.from_text(CALCULATOR))
+        parser.execute_on(text)(lambda *t: [s.symbol.name for s in t])
+        return parser.parse(tokens(stream))
+
+    @args("expr -> expr PLUS term", number("2"), PLUS_, number("3"), EOF)
+    def test_without_primitive(self):
+        self.assertResult(["expr", "PLUS", "term"])
+
+    @args("add % expr -> expr PLUS term", number("2"), PLUS_, number("3"), EOF)
+    def test_primitive_without_operands(self):
+        self.assertResult(["expr", "PLUS", "term"])
+
+    @args("add(1,3) % expr -> expr PLUS term", number("2"), PLUS_, number("3"), EOF)
+    def test_primitive_with_operands(self):
+        self.assertResult(["expr", "PLUS", "term"])
+
+    @args(" add( 1, 3 )%expr -> expr PLUS term", number("2"), PLUS_, number("3"), EOF)
+    def test_primitive_whitespace_is_ignored(self):
+        self.assertResult(["expr", "PLUS", "term"])
+
+    @args("int % term -> NUMBER", number("42"), EOF)
+    def test_value_type(self):
+        self.assertResult(["NUMBER"])
+
+    @args("<start> -> expr $", number("42"), EOF)
+    def test_starting_rule_of_text_grammar(self):
+        self.assertResult(["expr"])
+
+
+class TestParserExecuteOnRuleTextPrimitiveErrors(TestCase):
+    def subject(self, text):
+        return LR1Parser.from_grammar(Grammar.from_text(CALCULATOR)).execute_on(text)
+
+    @args("sub % expr -> expr PLUS term")
+    def test_other_primitive(self):
+        self.assertResultRaisesRegex(ValueError, "has primitive 'add'")
+
+    @args("foo % term -> NUMBER")
+    def test_unknown_primitive(self):
+        self.assertResultRaisesRegex(ValueError, "has primitive 'int'")
+
+    @args("int % expr -> term")
+    def test_primitive_of_rule_without_one(self):
+        self.assertResultRaisesRegex(ValueError, "has no primitive")
+
+    @args("add(3,1) % expr -> expr PLUS term")
+    def test_other_operands(self):
+        self.assertResultRaisesRegex(ValueError, r"has operands \(1, 3\)")
+
+    @args("int(1,1) % term -> NUMBER")
+    def test_operands_of_value_type(self):
+        self.assertResultRaisesRegex(ValueError, "has no operands")
+
+    @args("add(1,2,3) % expr -> expr PLUS term")
+    def test_malformed_operands(self):
+        self.assertResultRaisesRegex(ValueError, "^Invalid primitive")
+
+    @args("add(1,3 % expr -> expr PLUS term")
+    def test_unclosed_operands(self):
+        self.assertResultRaisesRegex(ValueError, "^Invalid primitive")
 
 
 class TestParserPrimitiveKinds(TestCase):

@@ -33,8 +33,9 @@ it. A starting rule with neither a callback nor a primitive returns the start
 symbol's value.
 
 To compute values yourself, register a callback for a rule with
-`@parser.execute_on(rule)`. Registering a rule that's not in the parser's
-grammar raises `ValueError`.
+`@parser.execute_on(rule)`. The rule can also be given
+[as text](#rules-as-text). Registering a rule that's not in the parser's grammar
+raises `ValueError`.
 
 - The callback is called with one token per right-hand side symbol, in order,
   and its return value becomes the rule's value.
@@ -204,6 +205,72 @@ Primitive int of rule 'factor -> NUMBER' failed. (ValueError("invalid literal fo
 
 `factor -> LPAREN expr RPAREN` has three symbols and no primitive, so it needs
 a callback to keep the value of `expr`.
+
+## Rules as text
+
+`execute_on` also takes a rule's text, as `str(rule)` prints it, and looks it up
+in the parser's grammar, so you don't need to hold on to the `Rule`:
+
+- Symbols are separated by whitespace and matched by name, as in
+  `"E -> T + E"`.
+- An empty rule is `"A -> ε"` or `"A ->"`.
+- The starting rule ends with `$`. A `Grammar.from_text` grammar's is
+  `"<start> -> expr $"`, where `expr` is the first rule's left-hand side.
+- The text can start with the rule's [primitive](grammars.md#primitives), as in
+  `Grammar.from_text`. It must then be the rule's primitive in the grammar, and
+  its operands, if you give any, the rule's operands. `"add % expr -> expr PLUS
+  term"` matches any operands.
+
+Text that doesn't name exactly one rule of the grammar, or gives a primitive
+the rule doesn't have, raises `ValueError`. If two symbols share a name, as a
+terminal and a non-terminal, pass the `Rule` instead.
+
+```python
+from syntactes import Grammar, Symbol, Token
+from syntactes.parser import Location, LR1Parser
+
+grammar = Grammar.from_text("""
+add(1,3) % expr -> expr PLUS term
+expr -> term
+int % term -> NUMBER
+""")
+
+parser = LR1Parser.from_grammar(grammar)
+
+
+@parser.execute_on("<start> -> expr $")
+def result(expr):
+    return f"= {expr.value}"
+
+
+@parser.execute_on("int % term -> NUMBER")
+def tens(number):
+    # The prefix is checked against the grammar, but the callback still wins
+    # over the primitive.
+    return int(number.value) * 10
+
+
+NUMBER, PLUS = Symbol("NUMBER", True), Symbol("PLUS", True)
+stream = [
+    Token(NUMBER, Location(0, 1, 1), "1"),
+    Token(PLUS, Location(2, 1, 3)),
+    Token(NUMBER, Location(4, 1, 5), "2"),
+    Token(Symbol.eof(), Location(5, 1, 6)),
+]
+print(parser.parse(stream))
+
+for text in ["expr -> term term", "sub % expr -> expr PLUS term"]:
+    try:
+        parser.execute_on(text)
+    except ValueError as e:
+        print(e)
+```
+
+```
+= 30
+Rule 'expr -> term term' is not in the parser's grammar.
+Rule 'expr -> expr PLUS term' has primitive 'add', not 'sub'.
+```
 
 ## Locations
 
