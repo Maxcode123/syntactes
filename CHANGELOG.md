@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.9.0 - Unreleased
+## 0.10.0 - Unreleased
 
 ### Breaking changes
 
