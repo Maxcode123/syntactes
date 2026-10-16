@@ -1,5 +1,5 @@
 from syntactes import Grammar, Rule, Symbol, Token
-from syntactes.parser import ParserError, SLRParser
+from syntactes.parser import Location, SLRParser, UnexpectedTokenError
 
 EOF = Symbol.eof()
 S = Symbol("S", is_terminal=False)
@@ -37,7 +37,8 @@ def result(e):
 def add(t, plus, e):
     # One token per right-hand side symbol, in order. A non-terminal's value is
     # whatever the callback of the rule that produced it returned.
-    print(f"reducing by {rule_2}: {t.value} {plus} {e.value}")
+    # A non-terminal's token starts where its first token does.
+    print(f"column {t.location.column}: reducing by {rule_2}: {t.value} + {e.value}")
     return t.value + e.value
 
 
@@ -52,17 +53,22 @@ def number(x_token):
     return x_token.value
 
 
-def num(value):
-    return Token(x, value)
+def lex(text):
+    # One token per character but spaces, located at its offset on line 1.
+    for offset, char in enumerate(text):
+        location = Location(offset, 1, offset + 1)
+        if char == "+":
+            yield Token(PLUS, location)
+        elif char != " ":
+            yield Token(x, location, int(char))
+    yield Token(EOF, Location(len(text), 1, len(text) + 1))
 
 
-plus, eof = Token(PLUS), Token(EOF)
+print("Parsing: 1 + 2 + 3\n")
+print("result:", parser.parse(lex("1 + 2 + 3")))
 
-print("Parsing stream: 1 + 2 + 3 $\n")
-print("result:", parser.parse([num(1), plus, num(2), plus, num(3), eof]))
-
-print("\nParsing stream: 1 + $\n")
+print("\nParsing: 1 +\n")
 try:
-    parser.parse([num(1), plus, eof])
-except ParserError as e:
-    print("ParserError:", e)
+    parser.parse(lex("1 +"))
+except UnexpectedTokenError as e:
+    print(f"column {e.received_token.location.column}: {e}")
