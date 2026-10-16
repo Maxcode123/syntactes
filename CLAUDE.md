@@ -15,6 +15,7 @@ through `uv run python …`.
 ```sh
 make test          # whole unit suite (unittest discover)
 make lint          # ruff check
+make lint-fix      # ruff check --fix
 make type-check    # ty
 make format        # ruff format (src and examples)
 uv run python -m unittest syntactes.tests.test_parser   # one module
