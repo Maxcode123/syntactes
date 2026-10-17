@@ -541,6 +541,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#rules-as-text" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rules as text
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#locations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Locations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#errors" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -781,6 +803,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#rules-as-text" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rules as text
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#locations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Locations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#errors" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -855,30 +899,35 @@ from its right-hand side tokens except the trailing <code>$</code>, and <code>pa
 it. A starting rule with neither a callback nor a primitive returns the start
 symbol's value.</p>
 <p>To compute values yourself, register a callback for a rule with
-<code>@parser.execute_on(rule)</code>. Registering a rule that's not in the parser's
-grammar raises <code>ValueError</code>.</p>
+<code>@parser.execute_on(rule)</code>. The rule can also be given
+<a href="#rules-as-text">as text</a>. Registering a rule that's not in the parser's grammar
+raises <code>ValueError</code>.</p>
 <ul>
 <li>The callback is called with one token per right-hand side symbol, in order,
   and its return value becomes the rule's value.</li>
-<li>Terminals carry the <code>value</code> they were created with, such as
-  <code>Token("x", True, 42)</code>.</li>
+<li>Each token has a <code>symbol</code>, a <a href="#locations"><code>location</code></a> and a <code>value</code>. A
+  terminal's token is the one from the stream, with the value it was read
+  with, such as <code>Token(x, Location(0, 1, 1), 42)</code>. A non-terminal's token holds
+  the value computed for its rule.</li>
 <li>An empty rule's callback is called with no arguments.</li>
 <li>A callback wins over the rule's primitive.</li>
 <li>Exceptions raised in callbacks propagate out of <code>parse()</code> unchanged.</li>
 </ul>
-<p><code>parse()</code> takes any iterable of tokens, a generator included, and expects <code>$</code>
-(<code>Token.eof()</code>) as the last one.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">syntactes</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grammar</span><span class="p">,</span> <span class="n">Rule</span><span class="p">,</span> <span class="n">Token</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">syntactes.parser</span><span class="w"> </span><span class="kn">import</span> <span class="n">ParserError</span><span class="p">,</span> <span class="n">SLRParser</span>
+<p><code>parse()</code> takes any iterable of <code>Token</code>s, a generator included. A token is a
+terminal <code>Symbol</code> of the grammar, the <a href="#locations"><code>Location</code></a> it starts at,
+and a <code>value</code>, which defaults to <code>None</code>. <code>parse()</code> expects a <code>$</code> token,
+<code>Token(Symbol.eof(), location)</code>, as the last one.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">syntactes</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grammar</span><span class="p">,</span> <span class="n">Rule</span><span class="p">,</span> <span class="n">Symbol</span><span class="p">,</span> <span class="n">Token</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">syntactes.parser</span><span class="w"> </span><span class="kn">import</span> <span class="n">Location</span><span class="p">,</span> <span class="n">SLRParser</span><span class="p">,</span> <span class="n">UnexpectedTokenError</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">EOF</span> <span class="o">=</span> <span class="n">Token</span><span class="o">.</span><span class="n">eof</span><span class="p">()</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">S</span> <span class="o">=</span> <span class="n">Token</span><span class="p">(</span><span class="s2">"S"</span><span class="p">,</span> <span class="n">is_terminal</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">E</span> <span class="o">=</span> <span class="n">Token</span><span class="p">(</span><span class="s2">"E"</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">T</span> <span class="o">=</span> <span class="n">Token</span><span class="p">(</span><span class="s2">"T"</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">x</span> <span class="o">=</span> <span class="n">Token</span><span class="p">(</span><span class="s2">"x"</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="n">PLUS</span> <span class="o">=</span> <span class="n">Token</span><span class="p">(</span><span class="s2">"+"</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">EOF</span> <span class="o">=</span> <span class="n">Symbol</span><span class="o">.</span><span class="n">eof</span><span class="p">()</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">S</span> <span class="o">=</span> <span class="n">Symbol</span><span class="p">(</span><span class="s2">"S"</span><span class="p">,</span> <span class="n">is_terminal</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">E</span> <span class="o">=</span> <span class="n">Symbol</span><span class="p">(</span><span class="s2">"E"</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">T</span> <span class="o">=</span> <span class="n">Symbol</span><span class="p">(</span><span class="s2">"T"</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">x</span> <span class="o">=</span> <span class="n">Symbol</span><span class="p">(</span><span class="s2">"x"</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="n">PLUS</span> <span class="o">=</span> <span class="n">Symbol</span><span class="p">(</span><span class="s2">"+"</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
 </span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">tokens</span> <span class="o">=</span> <span class="p">{</span><span class="n">EOF</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">PLUS</span><span class="p">}</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">symbols</span> <span class="o">=</span> <span class="p">{</span><span class="n">EOF</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">PLUS</span><span class="p">}</span>
 </span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
 </span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c1"># 0. S -&gt; E $</span>
 </span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="c1"># 1. E -&gt; T + E</span>
@@ -891,7 +940,7 @@ grammar raises <code>ValueError</code>.</p>
 </span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>
 </span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="n">rules</span> <span class="o">=</span> <span class="p">(</span><span class="n">rule_1</span><span class="p">,</span> <span class="n">rule_2</span><span class="p">,</span> <span class="n">rule_3</span><span class="p">,</span> <span class="n">rule_4</span><span class="p">)</span>
 </span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>
-</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="n">grammar</span> <span class="o">=</span> <span class="n">Grammar</span><span class="p">(</span><span class="n">rule_1</span><span class="p">,</span> <span class="n">rules</span><span class="p">,</span> <span class="n">tokens</span><span class="p">)</span>
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="n">grammar</span> <span class="o">=</span> <span class="n">Grammar</span><span class="p">(</span><span class="n">rule_1</span><span class="p">,</span> <span class="n">rules</span><span class="p">,</span> <span class="n">symbols</span><span class="p">)</span>
 </span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>
 </span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="n">parser</span> <span class="o">=</span> <span class="n">SLRParser</span><span class="o">.</span><span class="n">from_grammar</span><span class="p">(</span><span class="n">grammar</span><span class="p">)</span>
 </span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>
@@ -907,43 +956,51 @@ grammar raises <code>ValueError</code>.</p>
 </span><span id="__span-1-37"><a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a><span class="k">def</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">plus</span><span class="p">,</span> <span class="n">e</span><span class="p">):</span>
 </span><span id="__span-1-38"><a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a>    <span class="c1"># One token per right-hand side symbol, in order. A non-terminal's value is</span>
 </span><span id="__span-1-39"><a id="__codelineno-1-39" name="__codelineno-1-39" href="#__codelineno-1-39"></a>    <span class="c1"># whatever the callback of the rule that produced it returned.</span>
-</span><span id="__span-1-40"><a id="__codelineno-1-40" name="__codelineno-1-40" href="#__codelineno-1-40"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"reducing by </span><span class="si">{</span><span class="n">rule_2</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">t</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">plus</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="__span-1-41"><a id="__codelineno-1-41" name="__codelineno-1-41" href="#__codelineno-1-41"></a>    <span class="k">return</span> <span class="n">t</span><span class="o">.</span><span class="n">value</span> <span class="o">+</span> <span class="n">e</span><span class="o">.</span><span class="n">value</span>
-</span><span id="__span-1-42"><a id="__codelineno-1-42" name="__codelineno-1-42" href="#__codelineno-1-42"></a>
+</span><span id="__span-1-40"><a id="__codelineno-1-40" name="__codelineno-1-40" href="#__codelineno-1-40"></a>    <span class="c1"># A non-terminal's token starts where its first token does.</span>
+</span><span id="__span-1-41"><a id="__codelineno-1-41" name="__codelineno-1-41" href="#__codelineno-1-41"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"column </span><span class="si">{</span><span class="n">t</span><span class="o">.</span><span class="n">location</span><span class="o">.</span><span class="n">column</span><span class="si">}</span><span class="s2">: reducing by </span><span class="si">{</span><span class="n">rule_2</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">t</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2"> + </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="__span-1-42"><a id="__codelineno-1-42" name="__codelineno-1-42" href="#__codelineno-1-42"></a>    <span class="k">return</span> <span class="n">t</span><span class="o">.</span><span class="n">value</span> <span class="o">+</span> <span class="n">e</span><span class="o">.</span><span class="n">value</span>
 </span><span id="__span-1-43"><a id="__codelineno-1-43" name="__codelineno-1-43" href="#__codelineno-1-43"></a>
-</span><span id="__span-1-44"><a id="__codelineno-1-44" name="__codelineno-1-44" href="#__codelineno-1-44"></a><span class="nd">@parser</span><span class="o">.</span><span class="n">execute_on</span><span class="p">(</span><span class="n">rule_3</span><span class="p">)</span>
-</span><span id="__span-1-45"><a id="__codelineno-1-45" name="__codelineno-1-45" href="#__codelineno-1-45"></a><span class="k">def</span><span class="w"> </span><span class="nf">term</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
-</span><span id="__span-1-46"><a id="__codelineno-1-46" name="__codelineno-1-46" href="#__codelineno-1-46"></a>    <span class="k">return</span> <span class="n">t</span><span class="o">.</span><span class="n">value</span>
-</span><span id="__span-1-47"><a id="__codelineno-1-47" name="__codelineno-1-47" href="#__codelineno-1-47"></a>
+</span><span id="__span-1-44"><a id="__codelineno-1-44" name="__codelineno-1-44" href="#__codelineno-1-44"></a>
+</span><span id="__span-1-45"><a id="__codelineno-1-45" name="__codelineno-1-45" href="#__codelineno-1-45"></a><span class="nd">@parser</span><span class="o">.</span><span class="n">execute_on</span><span class="p">(</span><span class="n">rule_3</span><span class="p">)</span>
+</span><span id="__span-1-46"><a id="__codelineno-1-46" name="__codelineno-1-46" href="#__codelineno-1-46"></a><span class="k">def</span><span class="w"> </span><span class="nf">term</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+</span><span id="__span-1-47"><a id="__codelineno-1-47" name="__codelineno-1-47" href="#__codelineno-1-47"></a>    <span class="k">return</span> <span class="n">t</span><span class="o">.</span><span class="n">value</span>
 </span><span id="__span-1-48"><a id="__codelineno-1-48" name="__codelineno-1-48" href="#__codelineno-1-48"></a>
-</span><span id="__span-1-49"><a id="__codelineno-1-49" name="__codelineno-1-49" href="#__codelineno-1-49"></a><span class="nd">@parser</span><span class="o">.</span><span class="n">execute_on</span><span class="p">(</span><span class="n">rule_4</span><span class="p">)</span>
-</span><span id="__span-1-50"><a id="__codelineno-1-50" name="__codelineno-1-50" href="#__codelineno-1-50"></a><span class="k">def</span><span class="w"> </span><span class="nf">number</span><span class="p">(</span><span class="n">x_token</span><span class="p">):</span>
-</span><span id="__span-1-51"><a id="__codelineno-1-51" name="__codelineno-1-51" href="#__codelineno-1-51"></a>    <span class="c1"># Terminals carry the value they were created with.</span>
-</span><span id="__span-1-52"><a id="__codelineno-1-52" name="__codelineno-1-52" href="#__codelineno-1-52"></a>    <span class="k">return</span> <span class="n">x_token</span><span class="o">.</span><span class="n">value</span>
-</span><span id="__span-1-53"><a id="__codelineno-1-53" name="__codelineno-1-53" href="#__codelineno-1-53"></a>
+</span><span id="__span-1-49"><a id="__codelineno-1-49" name="__codelineno-1-49" href="#__codelineno-1-49"></a>
+</span><span id="__span-1-50"><a id="__codelineno-1-50" name="__codelineno-1-50" href="#__codelineno-1-50"></a><span class="nd">@parser</span><span class="o">.</span><span class="n">execute_on</span><span class="p">(</span><span class="n">rule_4</span><span class="p">)</span>
+</span><span id="__span-1-51"><a id="__codelineno-1-51" name="__codelineno-1-51" href="#__codelineno-1-51"></a><span class="k">def</span><span class="w"> </span><span class="nf">number</span><span class="p">(</span><span class="n">x_token</span><span class="p">):</span>
+</span><span id="__span-1-52"><a id="__codelineno-1-52" name="__codelineno-1-52" href="#__codelineno-1-52"></a>    <span class="c1"># Terminals carry the value they were created with.</span>
+</span><span id="__span-1-53"><a id="__codelineno-1-53" name="__codelineno-1-53" href="#__codelineno-1-53"></a>    <span class="k">return</span> <span class="n">x_token</span><span class="o">.</span><span class="n">value</span>
 </span><span id="__span-1-54"><a id="__codelineno-1-54" name="__codelineno-1-54" href="#__codelineno-1-54"></a>
-</span><span id="__span-1-55"><a id="__codelineno-1-55" name="__codelineno-1-55" href="#__codelineno-1-55"></a><span class="k">def</span><span class="w"> </span><span class="nf">num</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
-</span><span id="__span-1-56"><a id="__codelineno-1-56" name="__codelineno-1-56" href="#__codelineno-1-56"></a>    <span class="k">return</span> <span class="n">Token</span><span class="p">(</span><span class="s2">"x"</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
-</span><span id="__span-1-57"><a id="__codelineno-1-57" name="__codelineno-1-57" href="#__codelineno-1-57"></a>
-</span><span id="__span-1-58"><a id="__codelineno-1-58" name="__codelineno-1-58" href="#__codelineno-1-58"></a>
-</span><span id="__span-1-59"><a id="__codelineno-1-59" name="__codelineno-1-59" href="#__codelineno-1-59"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"Parsing stream: 1 + 2 + 3 $</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="__span-1-60"><a id="__codelineno-1-60" name="__codelineno-1-60" href="#__codelineno-1-60"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"result:"</span><span class="p">,</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">([</span><span class="n">num</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">PLUS</span><span class="p">,</span> <span class="n">num</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">PLUS</span><span class="p">,</span> <span class="n">num</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">EOF</span><span class="p">]))</span>
-</span><span id="__span-1-61"><a id="__codelineno-1-61" name="__codelineno-1-61" href="#__codelineno-1-61"></a>
-</span><span id="__span-1-62"><a id="__codelineno-1-62" name="__codelineno-1-62" href="#__codelineno-1-62"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Parsing stream: 1 + $</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="__span-1-63"><a id="__codelineno-1-63" name="__codelineno-1-63" href="#__codelineno-1-63"></a><span class="k">try</span><span class="p">:</span>
-</span><span id="__span-1-64"><a id="__codelineno-1-64" name="__codelineno-1-64" href="#__codelineno-1-64"></a>    <span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">([</span><span class="n">num</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">PLUS</span><span class="p">,</span> <span class="n">EOF</span><span class="p">])</span>
-</span><span id="__span-1-65"><a id="__codelineno-1-65" name="__codelineno-1-65" href="#__codelineno-1-65"></a><span class="k">except</span> <span class="n">ParserError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-</span><span id="__span-1-66"><a id="__codelineno-1-66" name="__codelineno-1-66" href="#__codelineno-1-66"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">"ParserError:"</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+</span><span id="__span-1-55"><a id="__codelineno-1-55" name="__codelineno-1-55" href="#__codelineno-1-55"></a>
+</span><span id="__span-1-56"><a id="__codelineno-1-56" name="__codelineno-1-56" href="#__codelineno-1-56"></a><span class="k">def</span><span class="w"> </span><span class="nf">lex</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+</span><span id="__span-1-57"><a id="__codelineno-1-57" name="__codelineno-1-57" href="#__codelineno-1-57"></a>    <span class="c1"># One token per character but spaces, located at its offset on line 1.</span>
+</span><span id="__span-1-58"><a id="__codelineno-1-58" name="__codelineno-1-58" href="#__codelineno-1-58"></a>    <span class="k">for</span> <span class="n">offset</span><span class="p">,</span> <span class="n">char</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+</span><span id="__span-1-59"><a id="__codelineno-1-59" name="__codelineno-1-59" href="#__codelineno-1-59"></a>        <span class="n">location</span> <span class="o">=</span> <span class="n">Location</span><span class="p">(</span><span class="n">offset</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">offset</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-1-60"><a id="__codelineno-1-60" name="__codelineno-1-60" href="#__codelineno-1-60"></a>        <span class="k">if</span> <span class="n">char</span> <span class="o">==</span> <span class="s2">"+"</span><span class="p">:</span>
+</span><span id="__span-1-61"><a id="__codelineno-1-61" name="__codelineno-1-61" href="#__codelineno-1-61"></a>            <span class="k">yield</span> <span class="n">Token</span><span class="p">(</span><span class="n">PLUS</span><span class="p">,</span> <span class="n">location</span><span class="p">)</span>
+</span><span id="__span-1-62"><a id="__codelineno-1-62" name="__codelineno-1-62" href="#__codelineno-1-62"></a>        <span class="k">elif</span> <span class="n">char</span> <span class="o">!=</span> <span class="s2">" "</span><span class="p">:</span>
+</span><span id="__span-1-63"><a id="__codelineno-1-63" name="__codelineno-1-63" href="#__codelineno-1-63"></a>            <span class="k">yield</span> <span class="n">Token</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">location</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">char</span><span class="p">))</span>
+</span><span id="__span-1-64"><a id="__codelineno-1-64" name="__codelineno-1-64" href="#__codelineno-1-64"></a>    <span class="k">yield</span> <span class="n">Token</span><span class="p">(</span><span class="n">EOF</span><span class="p">,</span> <span class="n">Location</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+</span><span id="__span-1-65"><a id="__codelineno-1-65" name="__codelineno-1-65" href="#__codelineno-1-65"></a>
+</span><span id="__span-1-66"><a id="__codelineno-1-66" name="__codelineno-1-66" href="#__codelineno-1-66"></a>
+</span><span id="__span-1-67"><a id="__codelineno-1-67" name="__codelineno-1-67" href="#__codelineno-1-67"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"Parsing: 1 + 2 + 3</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="__span-1-68"><a id="__codelineno-1-68" name="__codelineno-1-68" href="#__codelineno-1-68"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"result:"</span><span class="p">,</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">lex</span><span class="p">(</span><span class="s2">"1 + 2 + 3"</span><span class="p">)))</span>
+</span><span id="__span-1-69"><a id="__codelineno-1-69" name="__codelineno-1-69" href="#__codelineno-1-69"></a>
+</span><span id="__span-1-70"><a id="__codelineno-1-70" name="__codelineno-1-70" href="#__codelineno-1-70"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Parsing: 1 +</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="__span-1-71"><a id="__codelineno-1-71" name="__codelineno-1-71" href="#__codelineno-1-71"></a><span class="k">try</span><span class="p">:</span>
+</span><span id="__span-1-72"><a id="__codelineno-1-72" name="__codelineno-1-72" href="#__codelineno-1-72"></a>    <span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">lex</span><span class="p">(</span><span class="s2">"1 +"</span><span class="p">))</span>
+</span><span id="__span-1-73"><a id="__codelineno-1-73" name="__codelineno-1-73" href="#__codelineno-1-73"></a><span class="k">except</span> <span class="n">UnexpectedTokenError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+</span><span id="__span-1-74"><a id="__codelineno-1-74" name="__codelineno-1-74" href="#__codelineno-1-74"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"column </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">received_token</span><span class="o">.</span><span class="n">location</span><span class="o">.</span><span class="n">column</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span></code></pre></div>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Parsing stream: 1 + 2 + 3 $
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Parsing: 1 + 2 + 3
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>reducing by E -&gt; T + E: 2 + 3
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>reducing by E -&gt; T + E: 1 + 5
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>column 5: reducing by E -&gt; T + E: 2 + 3
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>column 1: reducing by E -&gt; T + E: 1 + 5
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>result: 6
 </span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>Parsing stream: 1 + $
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>Parsing: 1 +
 </span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>ParserError: Received token: $; expected one of: ['x']
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>column 4: Received token: $; expected one of: ['x']
 </span></code></pre></div>
 <h2 id="primitives">Primitives</h2>
 <p>A rule's <a href="../grammars/#primitives">primitive</a> computes its value when it has no
@@ -956,56 +1013,144 @@ callback, so a grammar can evaluate its input without any callbacks:</p>
 </ul>
 <p>If a primitive raises, <code>parse()</code> raises a <code>PrimitiveError</code> naming the rule, with
 the original exception as its <code>__cause__</code>.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">syntactes</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grammar</span><span class="p">,</span> <span class="n">Token</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">syntactes.parser</span><span class="w"> </span><span class="kn">import</span> <span class="n">LR1Parser</span><span class="p">,</span> <span class="n">PrimitiveError</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">grammar</span> <span class="o">=</span> <span class="n">Grammar</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="s2">"""</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="s2">add(1,3) </span><span class="si">% e</span><span class="s2">xpr -&gt; expr PLUS term</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="s2">sub(1,3) </span><span class="si">% e</span><span class="s2">xpr -&gt; expr MINUS term</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="s2">expr -&gt; term</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="s2">mul(1,3) % term -&gt; term TIMES factor</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="s2">term -&gt; factor</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="s2">int </span><span class="si">% f</span><span class="s2">actor -&gt; NUMBER</span>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="s2">factor -&gt; LPAREN expr RPAREN</span>
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="s2">"""</span><span class="p">)</span>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="n">parens</span> <span class="o">=</span> <span class="n">grammar</span><span class="o">.</span><span class="n">rules</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>
-</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="n">parser</span> <span class="o">=</span> <span class="n">LR1Parser</span><span class="o">.</span><span class="n">from_grammar</span><span class="p">(</span><span class="n">grammar</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">syntactes</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grammar</span><span class="p">,</span> <span class="n">Symbol</span><span class="p">,</span> <span class="n">Token</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">syntactes.parser</span><span class="w"> </span><span class="kn">import</span> <span class="n">Location</span><span class="p">,</span> <span class="n">LR1Parser</span><span class="p">,</span> <span class="n">PrimitiveError</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">grammar</span> <span class="o">=</span> <span class="n">Grammar</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="s2">"""</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="s2">add(1,3) </span><span class="si">% e</span><span class="s2">xpr -&gt; expr PLUS term</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="s2">sub(1,3) </span><span class="si">% e</span><span class="s2">xpr -&gt; expr MINUS term</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="s2">expr -&gt; term</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="s2">mul(1,3) % term -&gt; term TIMES factor</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="s2">term -&gt; factor</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="s2">int </span><span class="si">% f</span><span class="s2">actor -&gt; NUMBER</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="s2">factor -&gt; LPAREN expr RPAREN</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="s2">"""</span><span class="p">)</span>
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="n">parens</span> <span class="o">=</span> <span class="n">grammar</span><span class="o">.</span><span class="n">rules</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
 </span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>
-</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>
-</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="nd">@parser</span><span class="o">.</span><span class="n">execute_on</span><span class="p">(</span><span class="n">parens</span><span class="p">)</span>
-</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="k">def</span><span class="w"> </span><span class="nf">parenthesized</span><span class="p">(</span><span class="n">lparen</span><span class="p">,</span> <span class="n">expr</span><span class="p">,</span> <span class="n">rparen</span><span class="p">):</span>
-</span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>    <span class="c1"># Three symbols and no primitive, so without a callback the value is None.</span>
-</span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>    <span class="k">return</span> <span class="n">expr</span><span class="o">.</span><span class="n">value</span>
-</span><span id="__span-3-22"><a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>
-</span><span id="__span-3-23"><a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>
-</span><span id="__span-3-24"><a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a><span class="n">KINDS</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"+"</span><span class="p">:</span> <span class="s2">"PLUS"</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">:</span> <span class="s2">"MINUS"</span><span class="p">,</span> <span class="s2">"*"</span><span class="p">:</span> <span class="s2">"TIMES"</span><span class="p">,</span> <span class="s2">"("</span><span class="p">:</span> <span class="s2">"LPAREN"</span><span class="p">,</span> <span class="s2">")"</span><span class="p">:</span> <span class="s2">"RPAREN"</span><span class="p">}</span>
+</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="n">parser</span> <span class="o">=</span> <span class="n">LR1Parser</span><span class="o">.</span><span class="n">from_grammar</span><span class="p">(</span><span class="n">grammar</span><span class="p">)</span>
+</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>
+</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>
+</span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="nd">@parser</span><span class="o">.</span><span class="n">execute_on</span><span class="p">(</span><span class="n">parens</span><span class="p">)</span>
+</span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="k">def</span><span class="w"> </span><span class="nf">parenthesized</span><span class="p">(</span><span class="n">lparen</span><span class="p">,</span> <span class="n">expr</span><span class="p">,</span> <span class="n">rparen</span><span class="p">):</span>
+</span><span id="__span-3-22"><a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>    <span class="c1"># Three symbols and no primitive, so without a callback the value is None.</span>
+</span><span id="__span-3-23"><a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>    <span class="k">return</span> <span class="n">expr</span><span class="o">.</span><span class="n">value</span>
+</span><span id="__span-3-24"><a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a>
 </span><span id="__span-3-25"><a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>
-</span><span id="__span-3-26"><a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a>
-</span><span id="__span-3-27"><a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a><span class="k">def</span><span class="w"> </span><span class="nf">lex</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
-</span><span id="__span-3-28"><a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a>    <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">():</span>
-</span><span id="__span-3-29"><a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a>        <span class="k">yield</span> <span class="n">Token</span><span class="p">(</span><span class="n">KINDS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">word</span><span class="p">,</span> <span class="s2">"NUMBER"</span><span class="p">),</span> <span class="kc">True</span><span class="p">,</span> <span class="n">word</span><span class="p">)</span>
-</span><span id="__span-3-30"><a id="__codelineno-3-30" name="__codelineno-3-30" href="#__codelineno-3-30"></a>    <span class="k">yield</span> <span class="n">Token</span><span class="o">.</span><span class="n">eof</span><span class="p">()</span>
-</span><span id="__span-3-31"><a id="__codelineno-3-31" name="__codelineno-3-31" href="#__codelineno-3-31"></a>
-</span><span id="__span-3-32"><a id="__codelineno-3-32" name="__codelineno-3-32" href="#__codelineno-3-32"></a>
-</span><span id="__span-3-33"><a id="__codelineno-3-33" name="__codelineno-3-33" href="#__codelineno-3-33"></a><span class="nb">print</span><span class="p">(</span><span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">lex</span><span class="p">(</span><span class="s2">"2 * ( 7 - 2 - 1 ) + 3"</span><span class="p">)))</span>
+</span><span id="__span-3-26"><a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a><span class="n">KINDS</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"+"</span><span class="p">:</span> <span class="s2">"PLUS"</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">:</span> <span class="s2">"MINUS"</span><span class="p">,</span> <span class="s2">"*"</span><span class="p">:</span> <span class="s2">"TIMES"</span><span class="p">,</span> <span class="s2">"("</span><span class="p">:</span> <span class="s2">"LPAREN"</span><span class="p">,</span> <span class="s2">")"</span><span class="p">:</span> <span class="s2">"RPAREN"</span><span class="p">}</span>
+</span><span id="__span-3-27"><a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a>
+</span><span id="__span-3-28"><a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a>
+</span><span id="__span-3-29"><a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a><span class="k">def</span><span class="w"> </span><span class="nf">lex</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+</span><span id="__span-3-30"><a id="__codelineno-3-30" name="__codelineno-3-30" href="#__codelineno-3-30"></a>    <span class="k">for</span> <span class="n">match</span> <span class="ow">in</span> <span class="n">re</span><span class="o">.</span><span class="n">finditer</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\S+"</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+</span><span id="__span-3-31"><a id="__codelineno-3-31" name="__codelineno-3-31" href="#__codelineno-3-31"></a>        <span class="n">location</span> <span class="o">=</span> <span class="n">Location</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">start</span><span class="p">(),</span> <span class="mi">1</span><span class="p">,</span> <span class="n">match</span><span class="o">.</span><span class="n">start</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-3-32"><a id="__codelineno-3-32" name="__codelineno-3-32" href="#__codelineno-3-32"></a>        <span class="k">yield</span> <span class="n">Token</span><span class="p">(</span><span class="n">Symbol</span><span class="p">(</span><span class="n">KINDS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">match</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">"NUMBER"</span><span class="p">),</span> <span class="kc">True</span><span class="p">),</span> <span class="n">location</span><span class="p">,</span> <span class="n">match</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</span><span id="__span-3-33"><a id="__codelineno-3-33" name="__codelineno-3-33" href="#__codelineno-3-33"></a>    <span class="k">yield</span> <span class="n">Token</span><span class="p">(</span><span class="n">Symbol</span><span class="o">.</span><span class="n">eof</span><span class="p">(),</span> <span class="n">Location</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
 </span><span id="__span-3-34"><a id="__codelineno-3-34" name="__codelineno-3-34" href="#__codelineno-3-34"></a>
-</span><span id="__span-3-35"><a id="__codelineno-3-35" name="__codelineno-3-35" href="#__codelineno-3-35"></a><span class="k">try</span><span class="p">:</span>
-</span><span id="__span-3-36"><a id="__codelineno-3-36" name="__codelineno-3-36" href="#__codelineno-3-36"></a>    <span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">lex</span><span class="p">(</span><span class="s2">"2 + x"</span><span class="p">))</span>
-</span><span id="__span-3-37"><a id="__codelineno-3-37" name="__codelineno-3-37" href="#__codelineno-3-37"></a><span class="k">except</span> <span class="n">PrimitiveError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-</span><span id="__span-3-38"><a id="__codelineno-3-38" name="__codelineno-3-38" href="#__codelineno-3-38"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">__cause__</span><span class="si">!r}</span><span class="s2">)"</span><span class="p">)</span>
+</span><span id="__span-3-35"><a id="__codelineno-3-35" name="__codelineno-3-35" href="#__codelineno-3-35"></a>
+</span><span id="__span-3-36"><a id="__codelineno-3-36" name="__codelineno-3-36" href="#__codelineno-3-36"></a><span class="nb">print</span><span class="p">(</span><span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">lex</span><span class="p">(</span><span class="s2">"2 * ( 7 - 2 - 1 ) + 3"</span><span class="p">)))</span>
+</span><span id="__span-3-37"><a id="__codelineno-3-37" name="__codelineno-3-37" href="#__codelineno-3-37"></a>
+</span><span id="__span-3-38"><a id="__codelineno-3-38" name="__codelineno-3-38" href="#__codelineno-3-38"></a><span class="k">try</span><span class="p">:</span>
+</span><span id="__span-3-39"><a id="__codelineno-3-39" name="__codelineno-3-39" href="#__codelineno-3-39"></a>    <span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">lex</span><span class="p">(</span><span class="s2">"2 + x"</span><span class="p">))</span>
+</span><span id="__span-3-40"><a id="__codelineno-3-40" name="__codelineno-3-40" href="#__codelineno-3-40"></a><span class="k">except</span> <span class="n">PrimitiveError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+</span><span id="__span-3-41"><a id="__codelineno-3-41" name="__codelineno-3-41" href="#__codelineno-3-41"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">__cause__</span><span class="si">!r}</span><span class="s2">)"</span><span class="p">)</span>
 </span></code></pre></div>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>11
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>Primitive int of rule 'factor -&gt; NUMBER' failed. (ValueError("invalid literal for int() with base 10: 'x'"))
 </span></code></pre></div>
 <p><code>factor -&gt; LPAREN expr RPAREN</code> has three symbols and no primitive, so it needs
 a callback to keep the value of <code>expr</code>.</p>
+<h2 id="rules-as-text">Rules as text</h2>
+<p><code>execute_on</code> also takes a rule's text, as <code>str(rule)</code> prints it, and looks it up
+in the parser's grammar, so you don't need to hold on to the <code>Rule</code>:</p>
+<ul>
+<li>Symbols are separated by whitespace and matched by name, as in
+  <code>"E -&gt; T + E"</code>.</li>
+<li>An empty rule is <code>"A -&gt; ε"</code> or <code>"A -&gt;"</code>.</li>
+<li>The starting rule ends with <code>$</code>. A <code>Grammar.from_text</code> grammar's is
+  <code>"&lt;start&gt; -&gt; expr $"</code>, where <code>expr</code> is the first rule's left-hand side.</li>
+<li>The text can start with the rule's <a href="../grammars/#primitives">primitive</a>, as in
+  <code>Grammar.from_text</code>. It must then be the rule's primitive in the grammar, and
+  its operands, if you give any, the rule's operands. <code>"add % expr -&gt; expr PLUS
+  term"</code> matches any operands.</li>
+</ul>
+<p>Text that doesn't name exactly one rule of the grammar, or gives a primitive
+the rule doesn't have, raises <code>ValueError</code>. If two symbols share a name, as a
+terminal and a non-terminal, pass the <code>Rule</code> instead.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">syntactes</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grammar</span><span class="p">,</span> <span class="n">Symbol</span><span class="p">,</span> <span class="n">Token</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">syntactes.parser</span><span class="w"> </span><span class="kn">import</span> <span class="n">Location</span><span class="p">,</span> <span class="n">LR1Parser</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">grammar</span> <span class="o">=</span> <span class="n">Grammar</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="s2">"""</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="s2">add(1,3) </span><span class="si">% e</span><span class="s2">xpr -&gt; expr PLUS term</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="s2">expr -&gt; term</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="s2">int % term -&gt; NUMBER</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="s2">"""</span><span class="p">)</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="n">parser</span> <span class="o">=</span> <span class="n">LR1Parser</span><span class="o">.</span><span class="n">from_grammar</span><span class="p">(</span><span class="n">grammar</span><span class="p">)</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="nd">@parser</span><span class="o">.</span><span class="n">execute_on</span><span class="p">(</span><span class="s2">"&lt;start&gt; -&gt; expr $"</span><span class="p">)</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="k">def</span><span class="w"> </span><span class="nf">result</span><span class="p">(</span><span class="n">expr</span><span class="p">):</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>    <span class="k">return</span> <span class="sa">f</span><span class="s2">"= </span><span class="si">{</span><span class="n">expr</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2">"</span>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="nd">@parser</span><span class="o">.</span><span class="n">execute_on</span><span class="p">(</span><span class="s2">"int % term -&gt; NUMBER"</span><span class="p">)</span>
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="k">def</span><span class="w"> </span><span class="nf">tens</span><span class="p">(</span><span class="n">number</span><span class="p">):</span>
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>    <span class="c1"># The prefix is checked against the grammar, but the callback still wins</span>
+</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>    <span class="c1"># over the primitive.</span>
+</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">number</span><span class="o">.</span><span class="n">value</span><span class="p">)</span> <span class="o">*</span> <span class="mi">10</span>
+</span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a>
+</span><span id="__span-5-24"><a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a>
+</span><span id="__span-5-25"><a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a><span class="n">NUMBER</span><span class="p">,</span> <span class="n">PLUS</span> <span class="o">=</span> <span class="n">Symbol</span><span class="p">(</span><span class="s2">"NUMBER"</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span> <span class="n">Symbol</span><span class="p">(</span><span class="s2">"PLUS"</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-5-26"><a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a><span class="n">stream</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-5-27"><a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a>    <span class="n">Token</span><span class="p">(</span><span class="n">NUMBER</span><span class="p">,</span> <span class="n">Location</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="s2">"1"</span><span class="p">),</span>
+</span><span id="__span-5-28"><a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a>    <span class="n">Token</span><span class="p">(</span><span class="n">PLUS</span><span class="p">,</span> <span class="n">Location</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)),</span>
+</span><span id="__span-5-29"><a id="__codelineno-5-29" name="__codelineno-5-29" href="#__codelineno-5-29"></a>    <span class="n">Token</span><span class="p">(</span><span class="n">NUMBER</span><span class="p">,</span> <span class="n">Location</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="s2">"2"</span><span class="p">),</span>
+</span><span id="__span-5-30"><a id="__codelineno-5-30" name="__codelineno-5-30" href="#__codelineno-5-30"></a>    <span class="n">Token</span><span class="p">(</span><span class="n">Symbol</span><span class="o">.</span><span class="n">eof</span><span class="p">(),</span> <span class="n">Location</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">6</span><span class="p">)),</span>
+</span><span id="__span-5-31"><a id="__codelineno-5-31" name="__codelineno-5-31" href="#__codelineno-5-31"></a><span class="p">]</span>
+</span><span id="__span-5-32"><a id="__codelineno-5-32" name="__codelineno-5-32" href="#__codelineno-5-32"></a><span class="nb">print</span><span class="p">(</span><span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">stream</span><span class="p">))</span>
+</span><span id="__span-5-33"><a id="__codelineno-5-33" name="__codelineno-5-33" href="#__codelineno-5-33"></a>
+</span><span id="__span-5-34"><a id="__codelineno-5-34" name="__codelineno-5-34" href="#__codelineno-5-34"></a><span class="k">for</span> <span class="n">text</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"expr -&gt; term term"</span><span class="p">,</span> <span class="s2">"sub </span><span class="si">% e</span><span class="s2">xpr -&gt; expr PLUS term"</span><span class="p">]:</span>
+</span><span id="__span-5-35"><a id="__codelineno-5-35" name="__codelineno-5-35" href="#__codelineno-5-35"></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="__span-5-36"><a id="__codelineno-5-36" name="__codelineno-5-36" href="#__codelineno-5-36"></a>        <span class="n">parser</span><span class="o">.</span><span class="n">execute_on</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+</span><span id="__span-5-37"><a id="__codelineno-5-37" name="__codelineno-5-37" href="#__codelineno-5-37"></a>    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+</span><span id="__span-5-38"><a id="__codelineno-5-38" name="__codelineno-5-38" href="#__codelineno-5-38"></a>        <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+</span></code></pre></div>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>= 30
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>Rule 'expr -&gt; term term' is not in the parser's grammar.
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>Rule 'expr -&gt; expr PLUS term' has primitive 'add', not 'sub'.
+</span></code></pre></div>
+<h2 id="locations">Locations</h2>
+<p>Every token has a <code>location</code>, a <code>Location(offset, line, column)</code> saying where it
+starts in the source text. The offset is 0-based, and the line and column are
+1-based. Your lexer gives each terminal's token its location, and the parser
+gives each non-terminal's token the location of its first right-hand side
+token, so a callback can tell where its rule's text starts. An empty rule has no
+tokens, so its token gets the location of the token that follows it.</p>
+<p>If your lexer has a location type of its own, <code>Location.from_object</code> builds a
+<code>Location</code> from any object with <code>offset</code>, <code>line</code> and <code>column</code> attributes, like
+the locations of <a href="https://maximosnikiforakis.gr/lectes/">lectes</a> tokens, or from
+a mapping with those keys. It raises <code>LocationObjectError</code>, a <code>ParserError</code>, if
+one is missing or isn't an integer, with the conversion's exception as its
+<code>__cause__</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">syntactes.parser</span><span class="w"> </span><span class="kn">import</span> <span class="n">Location</span><span class="p">,</span> <span class="n">LocationObjectError</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">Location</span><span class="o">.</span><span class="n">from_object</span><span class="p">({</span><span class="s2">"offset"</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="s2">"line"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">"column"</span><span class="p">:</span> <span class="mi">3</span><span class="p">}))</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="k">try</span><span class="p">:</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="n">Location</span><span class="o">.</span><span class="n">from_object</span><span class="p">({</span><span class="s2">"offset"</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="s2">"line"</span><span class="p">:</span> <span class="s2">"two"</span><span class="p">,</span> <span class="s2">"column"</span><span class="p">:</span> <span class="mi">3</span><span class="p">})</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="k">except</span> <span class="n">LocationObjectError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">__cause__</span><span class="si">!r}</span><span class="s2">)"</span><span class="p">)</span>
+</span></code></pre></div>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>Location(offset=4, line=2, column=3)
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>cannot create Location object from {'offset': 4, 'line': 'two', 'column': 3}, 'line' cannot be converted to an integer (ValueError("invalid literal for int() with base 10: 'two'"))
+</span></code></pre></div>
 <h2 id="errors">Errors</h2>
 <p><code>parse()</code> raises a <code>ParserError</code> from <code>syntactes.parser</code>:</p>
 <ul>
 <li><code>UnexpectedTokenError</code> if a token has no action in the current state, or if
   tokens follow the <code>$</code> that completed the parse. Its <code>received_token</code> is the
-  token, and its <code>expected_tokens</code> holds the terminals that would have been
+  token, and its <code>expected_symbols</code> holds the terminals that would have been
   accepted, sorted.</li>
 <li><code>NotAcceptedError</code> if the stream ends before the parser accepts, for example
   when the <code>$</code> is missing.</li>
@@ -1018,36 +1163,47 @@ resolves them the way yacc does: shift wins over reduce, and between reduces
 the rule with the lowest number wins.</p>
 <p>For example, <code>expr -&gt; expr PLUS expr</code> is ambiguous, and shifting makes <code>PLUS</code>
 right-associative:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">syntactes</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grammar</span><span class="p">,</span> <span class="n">Token</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">syntactes.parser</span><span class="w"> </span><span class="kn">import</span> <span class="n">SLRParser</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">grammar</span> <span class="o">=</span> <span class="n">Grammar</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="s2">"""</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="s2">expr -&gt; expr PLUS expr</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="s2">expr -&gt; X</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="s2">"""</span><span class="p">)</span>
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="n">start</span><span class="p">,</span> <span class="n">add</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">grammar</span><span class="o">.</span><span class="n">rules</span>
-</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>
-</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="n">parser</span> <span class="o">=</span> <span class="n">SLRParser</span><span class="o">.</span><span class="n">from_grammar</span><span class="p">(</span><span class="n">grammar</span><span class="p">)</span>
-</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
-</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>
-</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="nd">@parser</span><span class="o">.</span><span class="n">execute_on</span><span class="p">(</span><span class="n">start</span><span class="p">)</span>
-</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="k">def</span><span class="w"> </span><span class="nf">result</span><span class="p">(</span><span class="n">expr</span><span class="p">):</span>
-</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>    <span class="k">return</span> <span class="n">expr</span><span class="o">.</span><span class="n">value</span>
-</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>
-</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>
-</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="nd">@parser</span><span class="o">.</span><span class="n">execute_on</span><span class="p">(</span><span class="n">add</span><span class="p">)</span>
-</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="k">def</span><span class="w"> </span><span class="nf">on_add</span><span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">plus</span><span class="p">,</span> <span class="n">right</span><span class="p">):</span>
-</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>    <span class="k">return</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">left</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2"> + </span><span class="si">{</span><span class="n">right</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2">)"</span>
-</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>
-</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>
-</span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="nd">@parser</span><span class="o">.</span><span class="n">execute_on</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-</span><span id="__span-5-24"><a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="k">def</span><span class="w"> </span><span class="nf">on_x</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
-</span><span id="__span-5-25"><a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a>    <span class="k">return</span> <span class="n">x</span><span class="o">.</span><span class="n">value</span>
-</span><span id="__span-5-26"><a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a>
-</span><span id="__span-5-27"><a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a>
-</span><span id="__span-5-28"><a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a><span class="n">PLUS</span> <span class="o">=</span> <span class="n">Token</span><span class="p">(</span><span class="s2">"PLUS"</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
-</span><span id="__span-5-29"><a id="__codelineno-5-29" name="__codelineno-5-29" href="#__codelineno-5-29"></a><span class="n">stream</span> <span class="o">=</span> <span class="p">[</span><span class="n">Token</span><span class="p">(</span><span class="s2">"X"</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"a"</span><span class="p">),</span> <span class="n">PLUS</span><span class="p">,</span> <span class="n">Token</span><span class="p">(</span><span class="s2">"X"</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"b"</span><span class="p">),</span> <span class="n">PLUS</span><span class="p">,</span> <span class="n">Token</span><span class="p">(</span><span class="s2">"X"</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"c"</span><span class="p">)]</span>
-</span><span id="__span-5-30"><a id="__codelineno-5-30" name="__codelineno-5-30" href="#__codelineno-5-30"></a><span class="nb">print</span><span class="p">(</span><span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">([</span><span class="o">*</span><span class="n">stream</span><span class="p">,</span> <span class="n">Token</span><span class="o">.</span><span class="n">eof</span><span class="p">()]))</span>  <span class="c1"># (a + (b + c))</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">syntactes</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grammar</span><span class="p">,</span> <span class="n">Symbol</span><span class="p">,</span> <span class="n">Token</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">syntactes.parser</span><span class="w"> </span><span class="kn">import</span> <span class="n">Location</span><span class="p">,</span> <span class="n">SLRParser</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="n">grammar</span> <span class="o">=</span> <span class="n">Grammar</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="s2">"""</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="s2">expr -&gt; expr PLUS expr</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="s2">expr -&gt; X</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="s2">"""</span><span class="p">)</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="n">start</span><span class="p">,</span> <span class="n">add</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">grammar</span><span class="o">.</span><span class="n">rules</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="n">parser</span> <span class="o">=</span> <span class="n">SLRParser</span><span class="o">.</span><span class="n">from_grammar</span><span class="p">(</span><span class="n">grammar</span><span class="p">)</span>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="nd">@parser</span><span class="o">.</span><span class="n">execute_on</span><span class="p">(</span><span class="n">start</span><span class="p">)</span>
+</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="k">def</span><span class="w"> </span><span class="nf">result</span><span class="p">(</span><span class="n">expr</span><span class="p">):</span>
+</span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a>    <span class="k">return</span> <span class="n">expr</span><span class="o">.</span><span class="n">value</span>
+</span><span id="__span-9-16"><a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>
+</span><span id="__span-9-17"><a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a>
+</span><span id="__span-9-18"><a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a><span class="nd">@parser</span><span class="o">.</span><span class="n">execute_on</span><span class="p">(</span><span class="n">add</span><span class="p">)</span>
+</span><span id="__span-9-19"><a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a><span class="k">def</span><span class="w"> </span><span class="nf">on_add</span><span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">plus</span><span class="p">,</span> <span class="n">right</span><span class="p">):</span>
+</span><span id="__span-9-20"><a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a>    <span class="k">return</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">left</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2"> + </span><span class="si">{</span><span class="n">right</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2">)"</span>
+</span><span id="__span-9-21"><a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a>
+</span><span id="__span-9-22"><a id="__codelineno-9-22" name="__codelineno-9-22" href="#__codelineno-9-22"></a>
+</span><span id="__span-9-23"><a id="__codelineno-9-23" name="__codelineno-9-23" href="#__codelineno-9-23"></a><span class="nd">@parser</span><span class="o">.</span><span class="n">execute_on</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+</span><span id="__span-9-24"><a id="__codelineno-9-24" name="__codelineno-9-24" href="#__codelineno-9-24"></a><span class="k">def</span><span class="w"> </span><span class="nf">on_x</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+</span><span id="__span-9-25"><a id="__codelineno-9-25" name="__codelineno-9-25" href="#__codelineno-9-25"></a>    <span class="k">return</span> <span class="n">x</span><span class="o">.</span><span class="n">value</span>
+</span><span id="__span-9-26"><a id="__codelineno-9-26" name="__codelineno-9-26" href="#__codelineno-9-26"></a>
+</span><span id="__span-9-27"><a id="__codelineno-9-27" name="__codelineno-9-27" href="#__codelineno-9-27"></a>
+</span><span id="__span-9-28"><a id="__codelineno-9-28" name="__codelineno-9-28" href="#__codelineno-9-28"></a><span class="n">PLUS</span><span class="p">,</span> <span class="n">X</span> <span class="o">=</span> <span class="n">Symbol</span><span class="p">(</span><span class="s2">"PLUS"</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span> <span class="n">Symbol</span><span class="p">(</span><span class="s2">"X"</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-9-29"><a id="__codelineno-9-29" name="__codelineno-9-29" href="#__codelineno-9-29"></a>
+</span><span id="__span-9-30"><a id="__codelineno-9-30" name="__codelineno-9-30" href="#__codelineno-9-30"></a>
+</span><span id="__span-9-31"><a id="__codelineno-9-31" name="__codelineno-9-31" href="#__codelineno-9-31"></a><span class="k">def</span><span class="w"> </span><span class="nf">lex</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+</span><span id="__span-9-32"><a id="__codelineno-9-32" name="__codelineno-9-32" href="#__codelineno-9-32"></a>    <span class="k">for</span> <span class="n">offset</span><span class="p">,</span> <span class="n">char</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+</span><span id="__span-9-33"><a id="__codelineno-9-33" name="__codelineno-9-33" href="#__codelineno-9-33"></a>        <span class="n">location</span> <span class="o">=</span> <span class="n">Location</span><span class="p">(</span><span class="n">offset</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">offset</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-9-34"><a id="__codelineno-9-34" name="__codelineno-9-34" href="#__codelineno-9-34"></a>        <span class="k">if</span> <span class="n">char</span> <span class="o">==</span> <span class="s2">"+"</span><span class="p">:</span>
+</span><span id="__span-9-35"><a id="__codelineno-9-35" name="__codelineno-9-35" href="#__codelineno-9-35"></a>            <span class="k">yield</span> <span class="n">Token</span><span class="p">(</span><span class="n">PLUS</span><span class="p">,</span> <span class="n">location</span><span class="p">)</span>
+</span><span id="__span-9-36"><a id="__codelineno-9-36" name="__codelineno-9-36" href="#__codelineno-9-36"></a>        <span class="k">elif</span> <span class="n">char</span> <span class="o">!=</span> <span class="s2">" "</span><span class="p">:</span>
+</span><span id="__span-9-37"><a id="__codelineno-9-37" name="__codelineno-9-37" href="#__codelineno-9-37"></a>            <span class="k">yield</span> <span class="n">Token</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">location</span><span class="p">,</span> <span class="n">char</span><span class="p">)</span>
+</span><span id="__span-9-38"><a id="__codelineno-9-38" name="__codelineno-9-38" href="#__codelineno-9-38"></a>    <span class="k">yield</span> <span class="n">Token</span><span class="p">(</span><span class="n">Symbol</span><span class="o">.</span><span class="n">eof</span><span class="p">(),</span> <span class="n">Location</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+</span><span id="__span-9-39"><a id="__codelineno-9-39" name="__codelineno-9-39" href="#__codelineno-9-39"></a>
+</span><span id="__span-9-40"><a id="__codelineno-9-40" name="__codelineno-9-40" href="#__codelineno-9-40"></a>
+</span><span id="__span-9-41"><a id="__codelineno-9-41" name="__codelineno-9-41" href="#__codelineno-9-41"></a><span class="nb">print</span><span class="p">(</span><span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">lex</span><span class="p">(</span><span class="s2">"a + b + c"</span><span class="p">)))</span>  <span class="c1"># (a + (b + c))</span>
 </span></code></pre></div>
 <p>To get left-associativity, write the grammar that way instead:
 <code>expr -&gt; expr PLUS X</code>.</p>

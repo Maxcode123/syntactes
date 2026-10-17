@@ -778,17 +778,17 @@ for each kind of table:</p>
 <tr>
 <td><code>LR0Generator</code></td>
 <td><code>LR0ParsingTable</code></td>
-<td>every token</td>
+<td>every terminal</td>
 </tr>
 <tr>
 <td><code>SLRGenerator</code></td>
 <td><code>SLRParsingTable</code></td>
-<td>the tokens that can follow the rule's left-hand side (its FOLLOW set)</td>
+<td>the terminals that can follow the rule's left-hand side (its FOLLOW set)</td>
 </tr>
 <tr>
 <td><code>LR1Generator</code></td>
 <td><code>LR1ParsingTable</code></td>
-<td>the tokens that can follow the rule in that state (its lookaheads)</td>
+<td>the terminals that can follow the rule in that state (its lookaheads)</td>
 </tr>
 </tbody>
 </table>
@@ -798,16 +798,16 @@ yourself: see <a href="../parsing/">Parsing</a>.</p>
 <h2 id="generating-a-table">Generating a table</h2>
 <p>Pass the grammar to a generator and call <code>generate()</code>. <code>pretty_str()</code> prints the
 rules and the table:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">syntactes</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grammar</span><span class="p">,</span> <span class="n">Rule</span><span class="p">,</span> <span class="n">SLRGenerator</span><span class="p">,</span> <span class="n">Token</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">syntactes</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grammar</span><span class="p">,</span> <span class="n">Rule</span><span class="p">,</span> <span class="n">SLRGenerator</span><span class="p">,</span> <span class="n">Symbol</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">EOF</span> <span class="o">=</span> <span class="n">Token</span><span class="o">.</span><span class="n">eof</span><span class="p">()</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">S</span> <span class="o">=</span> <span class="n">Token</span><span class="p">(</span><span class="s2">"S"</span><span class="p">,</span> <span class="n">is_terminal</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">E</span> <span class="o">=</span> <span class="n">Token</span><span class="p">(</span><span class="s2">"E"</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">T</span> <span class="o">=</span> <span class="n">Token</span><span class="p">(</span><span class="s2">"T"</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">x</span> <span class="o">=</span> <span class="n">Token</span><span class="p">(</span><span class="s2">"x"</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">PLUS</span> <span class="o">=</span> <span class="n">Token</span><span class="p">(</span><span class="s2">"+"</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">EOF</span> <span class="o">=</span> <span class="n">Symbol</span><span class="o">.</span><span class="n">eof</span><span class="p">()</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">S</span> <span class="o">=</span> <span class="n">Symbol</span><span class="p">(</span><span class="s2">"S"</span><span class="p">,</span> <span class="n">is_terminal</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">E</span> <span class="o">=</span> <span class="n">Symbol</span><span class="p">(</span><span class="s2">"E"</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">T</span> <span class="o">=</span> <span class="n">Symbol</span><span class="p">(</span><span class="s2">"T"</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">x</span> <span class="o">=</span> <span class="n">Symbol</span><span class="p">(</span><span class="s2">"x"</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">PLUS</span> <span class="o">=</span> <span class="n">Symbol</span><span class="p">(</span><span class="s2">"+"</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">tokens</span> <span class="o">=</span> <span class="p">{</span><span class="n">EOF</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">PLUS</span><span class="p">}</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">symbols</span> <span class="o">=</span> <span class="p">{</span><span class="n">EOF</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">PLUS</span><span class="p">}</span>
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
 </span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="c1"># 0. S -&gt; E $</span>
 </span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1"># 1. E -&gt; T + E</span>
@@ -820,7 +820,7 @@ rules and the table:</p>
 </span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>
 </span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="n">rules</span> <span class="o">=</span> <span class="p">(</span><span class="n">rule_1</span><span class="p">,</span> <span class="n">rule_2</span><span class="p">,</span> <span class="n">rule_3</span><span class="p">,</span> <span class="n">rule_4</span><span class="p">)</span>
 </span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>
-</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="n">grammar</span> <span class="o">=</span> <span class="n">Grammar</span><span class="p">(</span><span class="n">rule_1</span><span class="p">,</span> <span class="n">rules</span><span class="p">,</span> <span class="n">tokens</span><span class="p">)</span>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="n">grammar</span> <span class="o">=</span> <span class="n">Grammar</span><span class="p">(</span><span class="n">rule_1</span><span class="p">,</span> <span class="n">rules</span><span class="p">,</span> <span class="n">symbols</span><span class="p">)</span>
 </span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>
 </span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="n">generator</span> <span class="o">=</span> <span class="n">SLRGenerator</span><span class="p">(</span><span class="n">grammar</span><span class="p">)</span>
 </span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>
@@ -859,11 +859,11 @@ States are numbered breadth-first from 1, and the same grammar always gives
 the same table.</p>
 <h2 id="conflicts">Conflicts</h2>
 <p>A cell with more than one action is a conflict. <code>conflicts()</code> lists them. Each
-<code>Conflict</code> has the <code>state</code>, the <code>token</code>, the <code>actions</code> and a <code>conflict_type</code>:
+<code>Conflict</code> has the <code>state</code>, the <code>symbol</code>, the <code>actions</code> and a <code>conflict_type</code>:
 <code>SHIFT_REDUCE</code>, <code>REDUCE_REDUCE</code> or <code>SHIFT_SHIFT</code>.</p>
 <p>The grammar above has a conflict as an LR0 table, but not as an SLR table. In
-state 3, LR0 reduces by <code>E -&gt; T</code> on every token, <code>+</code> included, while SLR only
-reduces on the tokens that can follow <code>E</code>:</p>
+state 3, LR0 reduces by <code>E -&gt; T</code> on every terminal, <code>+</code> included, while SLR only
+reduces on the terminals that can follow <code>E</code>:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">syntactes</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grammar</span><span class="p">,</span> <span class="n">LR0Generator</span><span class="p">,</span> <span class="n">SLRGenerator</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">grammar</span> <span class="o">=</span> <span class="n">Grammar</span><span class="o">.</span><span class="n">from_text</span><span class="p">(</span><span class="s2">"""</span>
@@ -878,7 +878,7 @@ reduces on the tokens that can follow <code>E</code>:</p>
 </span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>
 </span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="k">for</span> <span class="n">conflict</span> <span class="ow">in</span> <span class="n">LR0Generator</span><span class="p">(</span><span class="n">grammar</span><span class="p">)</span><span class="o">.</span><span class="n">generate</span><span class="p">()</span><span class="o">.</span><span class="n">conflicts</span><span class="p">():</span>
 </span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>    <span class="n">actions</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">action</span><span class="p">)</span> <span class="k">for</span> <span class="n">action</span> <span class="ow">in</span> <span class="n">conflict</span><span class="o">.</span><span class="n">actions</span><span class="p">]</span>
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">conflict</span><span class="o">.</span><span class="n">conflict_type</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">conflict</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">number</span><span class="p">,</span> <span class="n">conflict</span><span class="o">.</span><span class="n">token</span><span class="p">,</span> <span class="n">actions</span><span class="p">)</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">conflict</span><span class="o">.</span><span class="n">conflict_type</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">conflict</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">number</span><span class="p">,</span> <span class="n">conflict</span><span class="o">.</span><span class="n">symbol</span><span class="p">,</span> <span class="n">actions</span><span class="p">)</span>
 </span></code></pre></div>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>LR0Generator 1 conflicts
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>SLRGenerator 0 conflicts
